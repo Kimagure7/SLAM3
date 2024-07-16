@@ -1,0 +1,110 @@
+%YAML:1.0
+
+#--------------------------------------------------------------------------------------------
+# Camera Parameters. Adjust them!
+#--------------------------------------------------------------------------------------------
+File.version: "1.0"
+
+
+Camera.type: "PinHole"
+
+# Camera calibration and distortion parameters (OpenCV) 
+# ZED 2i VGA resolution
+Camera1.fx: 266.625
+Camera1.fy: 266.63
+Camera1.cx: 338.6225
+Camera1.cy: 185.023
+
+Camera1.k1: -0.0500257
+Camera1.k2: 0.0236705
+Camera1.p1: 0.000224397
+Camera1.p2: -0.000387891
+Camera1.k3: -0.010013
+
+Camera2.fx: 267.3925
+Camera2.fy: 267.44
+Camera2.cx: 333.635
+Camera2.cy: 189.3895
+
+Camera2.k1: -0.0501959
+Camera2.k2: 0.0226476
+Camera2.p1: 0.000522163
+Camera2.p2: -4.18247e-05
+Camera2.k3: -0.00918929
+
+Camera.width: 672
+Camera.height: 376
+
+# Camera frames per second 
+Camera.fps: 60
+
+# Color order of the images (0: BGR, 1: RGB. It is ignored if images are grayscale)
+Camera.RGB: 1
+
+# Close/Far threshold. Baseline times.
+Stereo.ThDepth: 60.0
+Stereo.T_c1_c2: !!opencv-matrix
+  rows: 4
+  cols: 4
+  dt: f
+  data: [0.99999112, -0.00159356,  0.00390262,0.11995262652635574,
+         0.00160643,  0.99999328, -0.00329686,-0.000222115,
+         -0.00389734,  0.0033031 ,  0.99998695,0.000315209,
+         0,0,0,1.000000000000000]
+         
+# Camera frames per second 
+Camera.fps: 60
+
+Stereo.b: 0.11995262652635574
+
+# Color order of the images (0: BGR, 1: RGB. It is ignored if images are grayscale)
+Camera.RGB: 1
+
+# Close/Far threshold. Baseline times.
+Stereo.ThDepth: 35.0
+
+# Do not insert KFs when recently lost
+IMU.InsertKFsWhenLost: 0
+
+
+#--------------------------------------------------------------------------------------------
+# ORB Parameters
+#--------------------------------------------------------------------------------------------
+
+# ORB Extractor: Number of features per image
+ORBextractor.nFeatures: 1000
+
+# ORB Extractor: Scale factor between levels in the scale pyramid 	
+ORBextractor.scaleFactor: 1.2
+
+# ORB Extractor: Number of levels in the scale pyramid	
+ORBextractor.nLevels: 8
+
+# ORB Extractor: Fast threshold
+# Image is divided in a grid. At each cell FAST are extracted imposing a minimum response.
+# Firstly we impose iniThFAST. If no corners are detected we impose a lower value minThFAST
+# You can lower these values if your images have low contrast			
+ORBextractor.iniThFAST: 20
+ORBextractor.minThFAST: 7
+
+#--------------------------------------------------------------------------------------------
+# Viewer Parameters
+#--------------------------------------------------------------------------------------------
+Viewer.KeyFrameSize: 0.6
+Viewer.KeyFrameLineWidth: 2.0
+Viewer.GraphLineWidth: 1.0
+Viewer.PointSize: 2.0
+Viewer.CameraSize: 0.7
+Viewer.CameraLineWidth: 3.0
+Viewer.ViewpointX: 0.0
+Viewer.ViewpointY: -100.0
+Viewer.ViewpointZ: -0.1
+Viewer.ViewpointF: 2000.0
+
+System.LoadAtlasFromFile: "test.osa"
+#System.SaveAtlasToFile: "test.osa"
+
+
+
+
+

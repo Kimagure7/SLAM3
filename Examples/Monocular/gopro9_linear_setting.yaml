@@ -1,0 +1,85 @@
+%YAML:1.0
+
+#--------------------------------------------------------------------------------------------
+# Camera Parameters. Adjust them!
+#--------------------------------------------------------------------------------------------
+File.version: "1.0"
+
+Camera.type: "Rectified"
+
+# Camera calibration and distortion parameters (OpenICC https://github.com/urbste/OpenImuCameraCalibrator) 
+Camera1.fx: 880.092572862 #293.3641909539405 #457.408 # 228,704
+Camera1.fy: 880.092572862 #457.408 # 190.9733070521226
+Camera1.cx: 959.733317053 #481.061 # 254.93170605935475
+Camera1.cy: 552.04364613  #272.316 # 256.8974428996504
+
+# Camera resolution
+Camera.width: 1920 
+Camera.height: 1080
+
+Camera.newWidth: 960
+Camera.newHeight: 540 
+
+# Camera frames per second 
+Camera.fps: 50
+
+# Color order of the images (0: BGR, 1: RGB. It is ignored if images are grayscale)
+Camera.RGB: 1
+
+# Transformation from camera to imu (body frame)
+# calibrated with https://github.com/urbste/OpenImuCameraCalibrator
+IMU.T_b_c1: !!opencv-matrix
+   rows: 4
+   cols: 4
+   dt: f
+   data: [-0.999996 , 0.000319075 ,  0.00286166, 0.00262786, 
+           -0.00285855,   0.00933544,    -0.999952, -0.0196578,
+          -0.000345775 ,   -0.999956,  -0.00933449, -0.0027345,
+          0.0, 0.0, 0.0, 1.0]
+
+# IMU noise -> use OpenICC (https://github.com/urbste/OpenImuCameraCalibrator)
+IMU.NoiseGyro: 0.0013 # rad/s^0.5 
+IMU.NoiseAcc: 0.017 # m/s^1.5
+IMU.GyroWalk: 5e-5 # rad/s^1.5
+IMU.AccWalk: 0.0055 # m/s^2.5
+IMU.Frequency: 200.0
+
+
+#--------------------------------------------------------------------------------------------
+# ORB Parameters
+#--------------------------------------------------------------------------------------------
+
+# ORB Extractor: Number of features per image
+ORBextractor.nFeatures: 1000 
+
+# ORB Extractor: Scale factor between levels in the scale pyramid 	
+ORBextractor.scaleFactor: 1.2
+
+# ORB Extractor: Number of levels in the scale pyramid	
+ORBextractor.nLevels: 8
+
+# ORB Extractor: Fast threshold
+# Image is divided in a grid. At each cell FAST are extracted imposing a minimum response.
+# Firstly we impose iniThFAST. If no corners are detected we impose a lower value minThFAST
+# You can lower these values if your images have low contrast			
+ORBextractor.iniThFAST: 20
+ORBextractor.minThFAST: 7
+
+
+#--------------------------------------------------------------------------------------------
+# Viewer Parameters
+#--------------------------------------------------------------------------------------------
+Viewer.KeyFrameSize: 0.05
+Viewer.KeyFrameLineWidth: 1.0
+Viewer.GraphLineWidth: 0.9
+Viewer.PointSize: 2.0
+Viewer.CameraSize: 0.2
+Viewer.CameraLineWidth: 3.
+Viewer.ViewpointX: 0.0
+Viewer.ViewpointY: -0.7
+Viewer.ViewpointZ: -3.5 # -1.8
+Viewer.ViewpointF: 500.0
+
+System.LoadAtlasFromFile: "/home/steffen/Dokumente/data/TestMappingRelocalization/gopro_vid1.os3_map"
+System.SaveAtlasToFile: "/home/steffen/Dokumente/data/TestMappingRelocalization/gopro_vid2.os3_map"
+
