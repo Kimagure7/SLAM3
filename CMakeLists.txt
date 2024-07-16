@@ -185,6 +185,11 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/Examples/Monocular-Iner
 add_executable(mono_inertial_gopro_vi
 Examples/Monocular-Inertial/mono_inertial_gopro_vi.cc)
 target_link_libraries(mono_inertial_gopro_vi ${PROJECT_NAME})
+if(realsense2_FOUND)
+    add_executable(mono_inertial_realsense_D435i
+            Examples/Monocular-Inertial/mono_inertial_realsense_D435i.cc)
+    target_link_libraries(mono_inertial_realsense_D435i ${PROJECT_NAME})
+endif()
 
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/Examples/Calibration)
