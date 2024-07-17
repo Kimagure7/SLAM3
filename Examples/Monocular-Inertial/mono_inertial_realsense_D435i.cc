@@ -142,7 +142,7 @@ int main(int argc, char **argv) {
                 sensor.set_option(RS2_OPTION_AUTO_EXPOSURE_LIMIT,5000);
                 sensor.set_option(RS2_OPTION_EMITTER_ENABLED, 0); // switch off emitter
             }
-            // std::cout << "  " << index << " : " << sensor.get_info(RS2_CAMERA_INFO_NAME) << std::endl;
+            std::cout << "  " << index << " : " << sensor.get_info(RS2_CAMERA_INFO_NAME) << std::endl;
             get_sensor_option(sensor);
             if (index == 2){
                 // RGB camera (not used here...)
@@ -243,7 +243,7 @@ int main(int argc, char **argv) {
                 while(v_gyro_timestamp.size() > v_accel_timestamp_sync.size())
                 {
                     int index = v_accel_timestamp_sync.size();
-                    double target_time = v_gyro_timestamp[index];
+                    double target_time = v_gyro_timestamp[index]; // 其实是下一个gyro的时间 
 
                     rs2_vector interp_data = interpolateMeasure(target_time, current_accel_data, current_accel_timestamp,
                                                                 prev_accel_data, prev_accel_timestamp);
@@ -320,12 +320,12 @@ int main(int argc, char **argv) {
 
             std::chrono::steady_clock::time_point time_Start_Process = std::chrono::steady_clock::now();
 
-            if(count_im_buffer>1)
+            if(count_im_buffer>1) // 处理不过来 丢帧咯
                 cout << count_im_buffer -1 << " dropped frs\n";
             count_im_buffer = 0;
 
             while(v_gyro_timestamp.size() > v_accel_timestamp_sync.size())
-            {
+            { // 不断同步
                 int index = v_accel_timestamp_sync.size();
                 double target_time = v_gyro_timestamp[index];
 
