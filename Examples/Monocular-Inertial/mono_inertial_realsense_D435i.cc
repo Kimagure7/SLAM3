@@ -159,7 +159,9 @@ int main(int argc, char **argv) {
     rs2::pipeline pipe;
     // Create a configuration for configuring the pipeline with a non default profile
     rs2::config cfg;
-    cfg.enable_stream(RS2_STREAM_INFRARED, 1, 640, 480, RS2_FORMAT_Y8, 30);
+    //cfg.enable_stream(RS2_STREAM_INFRARED, 1, 640, 480, RS2_FORMAT_Y8, 30);
+    
+    cfg.enable_stream(RS2_STREAM_COLOR, -1, 1280, 720, RS2_FORMAT_RGB8, 30);
     cfg.enable_stream(RS2_STREAM_ACCEL, RS2_FORMAT_MOTION_XYZ32F);
     cfg.enable_stream(RS2_STREAM_GYRO, RS2_FORMAT_MOTION_XYZ32F);
 
@@ -200,8 +202,8 @@ int main(int argc, char **argv) {
                 return;
             }
 
-            rs2::video_frame color_frame = fs.get_infrared_frame();
-            imCV = cv::Mat(cv::Size(width_img, height_img), CV_8U, (void*)(color_frame.get_data()), cv::Mat::AUTO_STEP);
+            rs2::video_frame color_frame = fs.get_color_frame();
+            imCV = cv::Mat(cv::Size(width_img, height_img), CV_8UC3, (void*)(color_frame.get_data()), cv::Mat::AUTO_STEP);
 
             timestamp_image = fs.get_timestamp()*1e-3;
             image_ready = true;
@@ -258,7 +260,7 @@ int main(int argc, char **argv) {
     rs2::pipeline_profile pipe_profile = pipe.start(cfg, imu_callback);
 
     vector<ORB_SLAM3::IMU::Point> vImuMeas;
-    rs2::stream_profile cam_stream = pipe_profile.get_stream(RS2_STREAM_INFRARED, 1);
+    rs2::stream_profile cam_stream = pipe_profile.get_stream(RS2_STREAM_COLOR, -1);
 
 
     rs2::stream_profile imu_stream = pipe_profile.get_stream(RS2_STREAM_GYRO);
@@ -287,6 +289,7 @@ int main(int argc, char **argv) {
 
 
     // Create SLAM system. It initializes all system threads and gets ready to process frames.
+    // 版权信息在这里打印 既然在这里给出了setting 为什么上面不改了呢
     ORB_SLAM3::System SLAM(argv[1],argv[2],ORB_SLAM3::System::IMU_MONOCULAR, true, 0, file_name);
     float imageScale = SLAM.GetImageScale();
 
@@ -301,6 +304,7 @@ int main(int argc, char **argv) {
 
     double t_resize = 0.f;
     double t_track = 0.f;
+
 
     while (!SLAM.isShutDown())
     {
