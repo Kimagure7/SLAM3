@@ -30,7 +30,7 @@
 namespace ORB_SLAM3
 {
 
-LocalMapping::LocalMapping(System* pSys, Atlas *pAtlas, const float bMonocular, bool bInertial, const string &_strSeqName):
+LocalMapping::LocalMapping(System* pSys, Atlas *pAtlas, const float bMonocular, bool bInertial):
     mpSystem(pSys), mbMonocular(bMonocular), mbInertial(bInertial), mbResetRequested(false), mbResetRequestedActiveMap(false), mbFinishRequested(false), mbFinished(true), mpAtlas(pAtlas), bInitializing(false),
     mbAbortBA(false), mbStopped(false), mbStopRequested(false), mbNotStop(false), mbAcceptKeyFrames(true),
     mIdxInit(0), mScale(1.0), mInitSect(0), mbNotBA1(true), mbNotBA2(true), mIdxIteration(0), infoInertial(Eigen::MatrixXd::Zero(9,9))
@@ -107,17 +107,19 @@ void LocalMapping::Run()
 
                         if(dist>0.05)
                             mTinit += mpCurrentKeyFrame->mTimeStamp - mpCurrentKeyFrame->mPrevKF->mTimeStamp;
-                        if(!mpCurrentKeyFrame->GetMap()->GetIniertialBA2())
-                        {
-                            if((mTinit<10.f) && (dist<0.0015))
-                            {
-                                cout << "Not enough motion for initializing. Reseting..." << endl;
-                                unique_lock<mutex> lock(mMutexReset);
-                                mbResetRequestedActiveMap = true;
-                                mpMapToReset = mpCurrentKeyFrame->GetMap();
-                                mbBadImu = true;
-                            }
-                        }
+                            // disable bad IMU init check
+                            // if(!mpCurrentKeyFrame->GetMap()->GetIniertialBA2())
+                            // {
+                            //     if((mTinit<10.f) && (dist<0.001))
+                            //     {
+                            //         cout << "Not enough motion for initializing. Reseting... dist: " << dist << " mTinit: " << mTinit << endl;
+                            //         unique_lock<mutex> lock(mMutexReset);
+                            //         mbResetRequestedActiveMap = true;
+                            //         mpMapToReset = mpCurrentKeyFrame->GetMap();
+                            //         mbBadImu = true;
+                            //     }
+                            // }
+                        
 
                         bool bLarge = ((mpTracker->GetMatchesInliers()>75)&&mbMonocular)||((mpTracker->GetMatchesInliers()>100)&&!mbMonocular);
                         Optimizer::LocalInertialBA(mpCurrentKeyFrame, &mbAbortBA, mpCurrentKeyFrame->GetMap(),num_FixedKF_BA,num_OptKF_BA,num_MPs_BA,num_edges_BA, bLarge, !mpCurrentKeyFrame->GetMap()->GetIniertialBA2());
