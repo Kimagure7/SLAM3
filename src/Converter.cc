@@ -192,6 +192,22 @@ Eigen::Matrix<double,3,1> Converter::toVector3d(const cv::Point3f &cvPoint)
     return v;
 }
 
+Eigen::Matrix<float,3,1> Converter::toVector3f(const cv::Vec3f &cvVec)
+{
+    Eigen::Matrix<float,3,1> v;
+    v << cvVec[0], cvVec[1], cvVec[2];
+
+    return v;
+}
+
+Eigen::Matrix<double,3,1> Converter::toVector3d(const cv::Vec3d &cvVec)
+{
+    Eigen::Matrix<double,3,1> v;
+    v << cvVec[0], cvVec[1], cvVec[2];
+
+    return v;
+}
+
 Eigen::Matrix<double,3,3> Converter::toMatrix3d(const cv::Mat &cvMat3)
 {
     Eigen::Matrix<double,3,3> M;

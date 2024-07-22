@@ -62,6 +62,8 @@ public:
     static Eigen::Matrix<double,3,1> toVector3d(const cv::Mat &cvVector);
     static Eigen::Matrix<float,3,1> toVector3f(const cv::Mat &cvVector);
     static Eigen::Matrix<double,3,1> toVector3d(const cv::Point3f &cvPoint);
+    static Eigen::Matrix<float,3,1> toVector3f(const cv::Vec3f &cvVec);
+    static Eigen::Matrix<double,3,1> toVector3d(const cv::Vec3d &cvVec);
     static Eigen::Matrix<double,3,3> toMatrix3d(const cv::Mat &cvMat3);
     static Eigen::Matrix<double,4,4> toMatrix4d(const cv::Mat &cvMat4);
     static Eigen::Matrix<float,3,3> toMatrix3f(const cv::Mat &cvMat3);
