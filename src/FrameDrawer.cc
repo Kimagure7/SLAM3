@@ -73,6 +73,7 @@ cv::Mat FrameDrawer::DrawFrame(float imageScale)
             vIniKeys = mvIniKeys;
             vMatches = mvIniMatches;
             vTracks = mvTracks;
+            currentFrame = mCurrentFrame;
         }
         else if(mState==Tracking::OK)
         {
@@ -145,6 +146,9 @@ cv::Mat FrameDrawer::DrawFrame(float imageScale)
             }
             cv::line(im,pt1,pt2, standardColor,5);
         }
+
+        // visualize marker detection
+        cv::aruco::drawDetectedMarkers(im, currentFrame.markerCorners, currentFrame.markerIds);
 
     }
     else if(state==Tracking::OK) //TRACKING
