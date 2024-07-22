@@ -19,6 +19,9 @@
 #include "KannalaBrandt8.h"
 
 #include <boost/serialization/export.hpp>
+#include <opencv2/aruco.hpp>
+#include <opencv2/core/eigen.hpp>
+#include "Converter.h"
 
 //BOOST_CLASS_EXPORT_IMPLEMENT(ORB_SLAM3::KannalaBrandt8)
 
@@ -181,6 +184,8 @@ namespace ORB_SLAM3 {
             Eigen::Matrix3f K = this->toK_();
             tvr = new TwoViewReconstruction(K);
         }
+        vP3D.clear();
+        vbTriangulated.clear();
 
         //Correct FishEye distortion
         std::vector<cv::KeyPoint> vKeysUn1 = vKeys1, vKeysUn2 = vKeys2;
@@ -199,6 +204,82 @@ namespace ORB_SLAM3 {
         for(size_t i = 0; i < vKeys2.size(); i++) vKeysUn2[i].pt = vPts2[i];
 
         return tvr->Reconstruct(vKeysUn1,vKeysUn2,vMatches12,T21,vP3D,vbTriangulated);
+    }
+
+    bool KannalaBrandt8::ReconstructWithTwoViewsAndTags(
+            const std::vector<int>& markerIds1,
+            const std::vector<int>& markerIds2,
+            const std::vector<std::vector<cv::Point2f>>& markerCorners1,
+            const std::vector<std::vector<cv::Point2f>>& markerCorners2,
+            const std::vector<cv::KeyPoint>& vKeys1, 
+            const std::vector<cv::KeyPoint>& vKeys2,
+            const std::vector<int> &vMatches12,
+            const int tag_id,
+            const float tag_size,
+            Sophus::SE3f &T21,
+            std::vector<cv::Point3f> &vP3D, 
+            std::vector<bool> &vbTriangulated
+        ){
+        if(!tvr){
+            Eigen::Matrix3f K = this->toK_();
+            tvr = new TwoViewReconstruction(K);
+        }
+        vP3D.clear();
+        vbTriangulated.clear();
+
+        // Check if tags are avaliable
+        auto tag_iter1 = std::find(markerIds1.begin(), markerIds1.end(), tag_id);
+        auto tag_iter2 = std::find(markerIds2.begin(), markerIds2.end(), tag_id);
+        if ((tag_iter1 == markerIds1.end()) || (tag_iter2 == markerIds2.end())){
+            // tag not detected in both frames return false
+            return false;
+        }
+        int tag_idx1 = tag_iter1 - markerIds1.begin();
+        int tag_idx2 = tag_iter2 - markerIds2.begin();
+
+        // undistort corners
+        cv::Mat Dc = (cv::Mat_<float>(4,1) << mvParameters[4], mvParameters[5], mvParameters[6], mvParameters[7]);
+        cv::Mat Rc = cv::Mat::eye(3,3,CV_32F);
+        cv::Mat Kc = this->toK();
+
+        std::vector<std::vector<cv::Point2f>> tag1Corners(1, std::vector<cv::Point2f>(markerCorners1[tag_idx1].size()));
+        std::vector<std::vector<cv::Point2f>> tag2Corners(1, std::vector<cv::Point2f>(markerCorners2[tag_idx2].size()));
+        cv::fisheye::undistortPoints(markerCorners1[tag_idx1], tag1Corners[0], Kc,Dc,Rc,Kc);
+        cv::fisheye::undistortPoints(markerCorners2[tag_idx2], tag2Corners[0], Kc,Dc,Rc,Kc);
+
+        // localize tags
+        cv::Mat distCoeffs = cv::Mat1f(5, 1);
+        std::vector<cv::Vec3d> rvecs1, tvecs1, rvecs2, tvecs2;
+        cv::aruco::estimatePoseSingleMarkers(tag1Corners, tag_size, Kc, distCoeffs, rvecs1, tvecs1);
+        cv::aruco::estimatePoseSingleMarkers(tag2Corners, tag_size, Kc, distCoeffs, rvecs2, tvecs2);
+
+        // if result contains Nan, pose estimation has failed.
+        if (rvecs1[0][0] != rvecs1[0][0]) {return false;}
+        if (rvecs2[0][0] != rvecs2[0][0]) {return false;}
+
+        // calculate relative pose
+        cv::Mat R1w;
+        cv::Rodrigues(rvecs1[0], R1w);
+        R1w.convertTo(R1w, CV_32F); // convert double to float, required
+        Sophus::SE3f T1w(Converter::toMatrix3f(R1w), Converter::toVector3f(tvecs1[0]));
+
+        cv::Mat R2w;
+        cv::Rodrigues(rvecs2[0], R2w);
+        R2w.convertTo(R2w, CV_32F);
+        Sophus::SE3f T2w(Converter::toMatrix3f(R2w), Converter::toVector3f(tvecs2[0]));
+
+        T21 = T2w * T1w.inverse();
+        
+        // reconstruct
+        std::vector<cv::KeyPoint> vKeysUn1 = vKeys1, vKeysUn2 = vKeys2;
+        std::vector<cv::Point2f> vPts1(vKeys1.size()), vPts2(vKeys2.size());
+        for(size_t i = 0; i < vKeys1.size(); i++) vPts1[i] = vKeys1[i].pt;
+        for(size_t i = 0; i < vKeys2.size(); i++) vPts2[i] = vKeys2[i].pt;
+        cv::fisheye::undistortPoints(vPts1,vPts1,Kc,Dc,Rc,Kc);
+        cv::fisheye::undistortPoints(vPts2,vPts2,Kc,Dc,Rc,Kc);
+        for(size_t i = 0; i < vKeys1.size(); i++) vKeysUn1[i].pt = vPts1[i];
+        for(size_t i = 0; i < vKeys2.size(); i++) vKeysUn2[i].pt = vPts2[i];
+        return tvr->ReconstructWithTag(vKeysUn1,vKeysUn2,vMatches12,T21,vP3D,vbTriangulated);
     }
 
 
