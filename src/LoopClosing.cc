@@ -40,8 +40,6 @@ LoopClosing::LoopClosing(Atlas *pAtlas, KeyFrameDatabase *pDB, ORBVocabulary *pV
 {
     mnCovisibilityConsistencyTh = 3;
     mpLastCurrentKF = static_cast<KeyFrame*>(NULL);
-
-
     mstrFolderSubTraj = "SubTrajectories/";
     mnNumCorrection = 0;
     mnCorrectionGBA = 0;
@@ -419,7 +417,8 @@ bool LoopClosing::NewDetectCommonRegions()
     {
         // Search in BoW
         mpKeyFrameDB->DetectNBestCandidates(mpCurrentKF, vpLoopBowCand, vpMergeBowCand,3);
-    }    
+    }
+
     // Check the BoW candidates if the geometric candidate list is empty
     //Loop candidates
     if(!bLoopDetectedInKF && !vpLoopBowCand.empty())

@@ -84,7 +84,6 @@ public:
 
     Viewer* mpViewer;
 
-
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
 protected:
@@ -210,10 +209,6 @@ protected:
 
     // To (de)activate LC
     bool mbActiveLC = true;
-
-#ifdef REGISTER_LOOP
-    string mstrFolderLoop;
-#endif
 };
 
 } //namespace ORB_SLAM
