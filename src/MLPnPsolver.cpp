@@ -356,7 +356,9 @@ namespace ORB_SLAM3 {
     void MLPnPsolver::computePose(const bearingVectors_t &f, const points_t &p, const cov3_mats_t &covMats,
                                   const std::vector<int> &indices, transformation_t &result) {
         size_t numberCorrespondences = indices.size();
-        assert(numberCorrespondences > 5);
+        if (numberCorrespondences <= 5) {
+            throw std::runtime_error("MLPnPsolver::computePose failed! numberCorrespondences <= 5");
+        }
 
         bool planar = false;
         // compute the nullspace of all vectors
@@ -696,7 +698,9 @@ namespace ORB_SLAM3 {
         const int numObservations = pts.size();
         const int numUnknowns = 6;
         // check redundancy
-        assert((2 * numObservations - numUnknowns) > 0);
+        if ((2 * numObservations - numUnknowns) <= 0) {
+            throw std::runtime_error("MLPnPsolver::mlpnp_gn failed! (2 * numObservations - numUnknowns) <= 0");
+        }
 
         // =============
         // set all matrices up
