@@ -127,6 +127,94 @@ namespace ORB_SLAM3
             return ReconstructF(vbMatchesInliersF,F,mK,T21,vP3D,vbTriangulated,minParallax,50);
         }
     }
+    bool TwoViewReconstruction::ReconstructWithTag(
+        const std::vector<cv::KeyPoint>& vKeys1, 
+        const std::vector<cv::KeyPoint>& vKeys2, 
+        const std::vector<int> &vMatches12,
+        const Sophus::SE3f &T21,
+        std::vector<cv::Point3f> &vP3D, 
+        std::vector<bool> &vbTriangulated){
+
+        mvKeys1.clear();
+        mvKeys2.clear();
+
+        mvKeys1 = vKeys1;
+        mvKeys2 = vKeys2;
+
+        // Fill structures with current keypoints and matches with reference frame
+        // Reference Frame: 1, Current Frame: 2
+        mvMatches12.clear();
+        mvMatches12.reserve(mvKeys2.size());
+        mvbMatched1.resize(mvKeys1.size());
+        for(size_t i=0, iend=vMatches12.size();i<iend; i++)
+        {
+            if(vMatches12[i]>=0)
+            {
+                mvMatches12.push_back(make_pair(i,vMatches12[i]));
+                mvbMatched1[i]=true;
+            }
+            else
+                mvbMatched1[i]=false;
+        }
+
+        const int N = mvMatches12.size();
+
+        // Indices for minimum set selection
+        vector<size_t> vAllIndices;
+        vAllIndices.reserve(N);
+        vector<size_t> vAvailableIndices;
+
+        for(int i=0; i<N; i++)
+        {
+            vAllIndices.push_back(i);
+        }
+
+        // Generate sets of 8 points for each RANSAC iteration
+        mvSets = vector< vector<size_t> >(mMaxIterations,vector<size_t>(8,0));
+
+        DUtils::Random::SeedRandOnce(0);
+
+        for(int it=0; it<mMaxIterations; it++)
+        {
+            vAvailableIndices = vAllIndices;
+
+            // Select a minimum set
+            for(size_t j=0; j<8; j++)
+            {
+                int randi = DUtils::Random::RandomInt(0,vAvailableIndices.size()-1);
+                int idx = vAvailableIndices[randi];
+
+                mvSets[it][j] = idx;
+
+                vAvailableIndices[randi] = vAvailableIndices.back();
+                vAvailableIndices.pop_back();
+            }
+        }
+
+
+        // Find foundametal matrix and inliers
+        vector<bool> vbMatchesInliers;
+        float SF;
+        Eigen::Matrix3f F;
+        TwoViewReconstruction::FindFundamental(vbMatchesInliers, SF, F);
+
+        // Reconstruct with T21 calculated from Tags
+        Eigen::Matrix3f R = T21.rotationMatrix();
+        Eigen::Vector3f t = T21.translation();
+        float parallax;
+
+        int nGood = CheckRT(R,t,mvKeys1,mvKeys2,mvMatches12,vbMatchesInliers,mK,vP3D, 4.0*mSigma2,vbTriangulated, parallax);
+        if (nGood < 50) {
+            std::cout << "Reconstruct failed line 209 nGood=" << nGood << std::endl;
+            return false;
+        }
+
+        if (parallax < 1.0){
+            std::cout << "Reconsturct failed line 213 parallax=" << parallax << std::endl;
+            return false;
+        }
+        return true;
+    }
 
     void TwoViewReconstruction::FindHomography(vector<bool> &vbMatchesInliers, float &score, Eigen::Matrix3f &H21)
     {
