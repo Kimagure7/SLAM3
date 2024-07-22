@@ -26,6 +26,7 @@
 
 #include<mutex>
 #include<chrono>
+//#include<exception>
 
 namespace ORB_SLAM3
 {
@@ -71,10 +72,8 @@ void LocalMapping::Run()
             // BoW conversion and insertion in Map
             ProcessNewKeyFrame();
 
-
             // Check recent MapPoints
             MapPointCulling();
-
 
             // Triangulate new MapPoints
             CreateNewMapPoints();
@@ -86,8 +85,6 @@ void LocalMapping::Run()
                 // Find more matches in neighbor keyframes and fuse point duplications
                 SearchInNeighbors();
             }
-
-
 
             bool b_doneLBA = false;
             int num_FixedKF_BA = 0;
@@ -102,11 +99,14 @@ void LocalMapping::Run()
 
                     if(mbInertial && mpCurrentKeyFrame->GetMap()->isImuInitialized())
                     {
-                        float dist = (mpCurrentKeyFrame->mPrevKF->GetCameraCenter() - mpCurrentKeyFrame->GetCameraCenter()).norm() +
-                                (mpCurrentKeyFrame->mPrevKF->mPrevKF->GetCameraCenter() - mpCurrentKeyFrame->mPrevKF->GetCameraCenter()).norm();
+                        // This code assumes > 2 keyframes in map
+                        // However resuming is a little weird
+                        if ((mpCurrentKeyFrame->mPrevKF != nullptr) && (mpCurrentKeyFrame->mPrevKF != nullptr)){
+                            float dist = (mpCurrentKeyFrame->mPrevKF->GetCameraCenter() - mpCurrentKeyFrame->GetCameraCenter()).norm() +
+                                    (mpCurrentKeyFrame->mPrevKF->mPrevKF->GetCameraCenter() - mpCurrentKeyFrame->mPrevKF->GetCameraCenter()).norm();
 
-                        if(dist>0.05)
-                            mTinit += mpCurrentKeyFrame->mTimeStamp - mpCurrentKeyFrame->mPrevKF->mTimeStamp;
+                            if(dist>0.05)
+                                mTinit += mpCurrentKeyFrame->mTimeStamp - mpCurrentKeyFrame->mPrevKF->mTimeStamp;
                             // disable bad IMU init check
                             // if(!mpCurrentKeyFrame->GetMap()->GetIniertialBA2())
                             // {
@@ -119,7 +119,7 @@ void LocalMapping::Run()
                             //         mbBadImu = true;
                             //     }
                             // }
-                        
+                        }
 
                         bool bLarge = ((mpTracker->GetMatchesInliers()>75)&&mbMonocular)||((mpTracker->GetMatchesInliers()>100)&&!mbMonocular);
                         Optimizer::LocalInertialBA(mpCurrentKeyFrame, &mbAbortBA, mpCurrentKeyFrame->GetMap(),num_FixedKF_BA,num_OptKF_BA,num_MPs_BA,num_edges_BA, bLarge, !mpCurrentKeyFrame->GetMap()->GetIniertialBA2());
@@ -132,7 +132,6 @@ void LocalMapping::Run()
                     }
 
                 }
-
                 // Initialize IMU here
                 if(!mpCurrentKeyFrame->GetMap()->isImuInitialized() && mbInertial)
                 {
@@ -146,7 +145,6 @@ void LocalMapping::Run()
 
                 // Check redundant local Keyframes
                 KeyFrameCulling();
-
 
                 if ((mTinit<50.0f) && mbInertial)
                 {
@@ -958,7 +956,7 @@ void LocalMapping::KeyFrameCulling()
                 if(pKF->mnId>(mpCurrentKeyFrame->mnId-2))
                     continue;
 
-                if(pKF->mPrevKF && pKF->mNextKF)
+                if(pKF->mPrevKF && pKF->mpImuPreintegrated && pKF->mNextKF && pKF->mNextKF->mpImuPreintegrated)
                 {
                     const float t = pKF->mNextKF->mTimeStamp-pKF->mPrevKF->mTimeStamp;
 
@@ -1211,7 +1209,7 @@ void LocalMapping::InitializeIMU(float priorG, float priorA, bool bFIBA)
     std::cout<<"Init mbg: "<<mbg<<"\n";
     std::cout<<"Init mba: "<<mba<<"\n";
 
-    if (mScale<1e-3)
+    if (mScale<1e-1)
     {
         cout << "scale too small" << endl;
         bInitializing=false;
