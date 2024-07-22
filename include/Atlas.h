@@ -25,7 +25,6 @@
 #include "GeometricCamera.h"
 #include "Pinhole.h"
 #include "KannalaBrandt8.h"
-#include "DoubleSphere.h"
 
 #include <set>
 #include <mutex>
@@ -43,7 +42,6 @@ class KeyFrameDatabase;
 class Frame;
 class KannalaBrandt8;
 class Pinhole;
-class DoubleSphere;
 
 //BOOST_CLASS_EXPORT_GUID(Pinhole, "Pinhole")
 //BOOST_CLASS_EXPORT_GUID(KannalaBrandt8, "KannalaBrandt8")
@@ -152,9 +150,9 @@ protected:
 
     std::vector<GeometricCamera*> mvpCameras;
 
-    std::vector<KannalaBrandt8*> mvpBackupCamKan;
-    std::vector<DoubleSphere*> mvpBackupCamDS;
-    std::vector<Pinhole*> mvpBackupCamPin;
+    // std::vector<KannalaBrandt8*> mvpBackupCamKan;
+    // std::vector<DoubleSphere*> mvpBackupCamDS;
+    // std::vector<Pinhole*> mvpBackupCamPin;
 
     unsigned long int mnLastInitKFidMap;
 

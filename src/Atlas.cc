@@ -22,7 +22,6 @@
 #include "GeometricCamera.h"
 #include "Pinhole.h"
 #include "KannalaBrandt8.h"
-#include "DoubleSphere.h"
 
 namespace ORB_SLAM3
 {
