@@ -2,10 +2,10 @@ Calibration results
 ====================
 Camera-system parameters:
 cam0 (/cam0/image_raw):
-    type: <class 'aslam_cv.libaslam_cv_python.DistortedPinholeCameraGeometry'>
-    distortion: [ 0.12654702 -0.2140766   0.00091269 -0.00317508] +- [0.0040596  0.00870865 0.00051723 0.00074716]
-    projection: [910.34857558 913.38968507 649.26933459 377.10979606] +- [1.53736639 1.53089921 1.47436842 1.28915134]
-    reprojection error: [0.000000, 0.000000] +- [0.287041, 0.277600]
+    type: <class 'aslam_cv.libaslam_cv_python.EquidistantDistortedPinholeCameraGeometry'>
+    distortion: [ 0.3629376   1.42254321 -7.57228568 11.99773121] +- [0.01616255 0.19283206 0.9154985  1.45497019]
+    projection: [911.05649263 915.36904269 654.54823528 375.66810191] +- [1.49848477 1.51083662 0.89229483 0.56625001]
+    reprojection error: [-0.000000, 0.000000] +- [0.282370, 0.271946]
 
 
 

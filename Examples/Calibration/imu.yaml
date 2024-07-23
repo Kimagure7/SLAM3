@@ -1,8 +1,9 @@
-Gyr:
-   avg-axis:
-      gyr_n: 0.0016943712356424579
-      gyr_w: 2.3293241428545093e-05
-Acc:
-   avg-axis:
-      acc_n: 0.012053874856036331
-      acc_w: 0.00031754843471509944
+rostopic: /imu0
+update_rate: 200.0
+
+gyroscope_noise_density: 0.0016943712356424579
+gyroscope_random_walk: 2.3293241428545093e-05
+
+accelerometer_noise_density: 0.012053874856036331
+accelerometer_random_walk: 0.00031754843471509944
+
