@@ -2413,7 +2413,8 @@ void Tracking::CheckReplacedInLastFrame()
     }
 }
 
-
+//目的：当系统处于初始化或跟踪正常状态时，该函数通过将当前帧与参考关键帧进行匹配来估计相机位姿。
+//它首先执行ORB特征匹配，如果找到足够多的匹配点，则使用PnP求解器来估计相机姿态。
 bool Tracking::TrackReferenceKeyFrame()
 {
     // Compute Bag of Words vector
@@ -2548,6 +2549,7 @@ void Tracking::UpdateLastFrame()
     }
 }
 
+//利用运动模型预测当前帧的相机位姿。如果系统正在使用IMU信息，则会利用IMU预积分数据预测状态；否则，基于上一帧到当前帧之间的运动预测相机位姿。
 bool Tracking::TrackWithMotionModel()
 {
     ORBmatcher matcher(0.9,true);
@@ -2643,6 +2645,7 @@ bool Tracking::TrackWithMotionModel()
         return nmatchesMap>=10;
 }
 
+//一旦有了初步的相机姿态估计（无论是通过参考关键帧还是运动模型），该函数会更新局部地图，并尝试在局部地图中寻找更多匹配点以优化当前帧的姿态。
 bool Tracking::TrackLocalMap()
 {
 
