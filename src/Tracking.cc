@@ -220,7 +220,7 @@ bool Tracking::ParseCamParamFile(cv::FileStorage &fSettings)
     bool b_miss_params = false;
 
     string sCameraName = fSettings["Camera.type"];
-    mpCameraName = sCameraName;
+
     if(sCameraName == "PinHole")
     {
         float fx, fy, cx, cy;
