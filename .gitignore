@@ -25,7 +25,7 @@ Examples/Monocular-Inertial/mono_inertial_realsense_D435i
 Examples/Monocular-Inertial/mono_inertial_realsense_D435i_2
 
 
-Examples/Calibration/bag/.*
+Examples/Calibration/bag/*
 Examples/Calibration/recorder_realsense_D435i
 Examples/data/*
 *.bag
