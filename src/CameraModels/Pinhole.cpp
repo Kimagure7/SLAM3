@@ -103,6 +103,7 @@ namespace ORB_SLAM3 {
             std::vector<cv::Point3f> &vP3D, 
             std::vector<bool> &vbTriangulated
         ){
+        return false;
         if(!tvr){
             Eigen::Matrix3f K = this->toK_();
             tvr = new TwoViewReconstruction(K);

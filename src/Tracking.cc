@@ -2182,24 +2182,22 @@ void Tracking::MonocularInitialization()
             vbTriangulated
         );
         std::cout << "init_success=" << reconstruct_success << endl;
-        if (mpCameraName == "KannalaBrandt8"){
-            if (!reconstruct_success) {
-                reconstruct_success = mpCamera->ReconstructWithTwoViewsAndTags(
-                    mInitialFrame.markerIds,
-                    mCurrentFrame.markerIds,
-                    mInitialFrame.markerCorners,
-                    mCurrentFrame.markerCorners,
-                    mInitialFrame.mvKeysUn,
-                    mCurrentFrame.mvKeysUn,
-                    mvIniMatches,
-                    minit_tag_id,
-                    minit_tag_size,
-                    Tcw,
-                    mvIniP3D,
-                    vbTriangulated
-                );
-                std::cout << " tag_init_success=" << reconstruct_success << endl;
-            }
+        if (!reconstruct_success) {
+            reconstruct_success = mpCamera->ReconstructWithTwoViewsAndTags(
+                mInitialFrame.markerIds,
+                mCurrentFrame.markerIds,
+                mInitialFrame.markerCorners,
+                mCurrentFrame.markerCorners,
+                mInitialFrame.mvKeysUn,
+                mCurrentFrame.mvKeysUn,
+                mvIniMatches,
+                minit_tag_id,
+                minit_tag_size,
+                Tcw,
+                mvIniP3D,
+                vbTriangulated
+            );
+            std::cout << " tag_init_success=" << reconstruct_success << endl;
         }
 
         if (reconstruct_success) {
