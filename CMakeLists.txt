@@ -186,6 +186,9 @@ if(realsense2_FOUND)
     target_link_libraries(mono_inertial_realsense_D435i ${PROJECT_NAME})
 endif()
 
+add_executable(rsd435i_equi
+Examples/Monocular-Inertial/rsd435i_equi.cc)
+target_link_libraries(rsd435i_equi ${PROJECT_NAME})
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/Examples/Calibration)
 if(realsense2_FOUND)
@@ -193,3 +196,4 @@ if(realsense2_FOUND)
             Examples/Calibration/recorder_realsense_D435i.cc)
     target_link_libraries(recorder_realsense_D435i ${PROJECT_NAME})
 endif()
+
