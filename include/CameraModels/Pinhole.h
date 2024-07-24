@@ -88,7 +88,7 @@ namespace ORB_SLAM3 {
             Sophus::SE3f &T21, 
             std::vector<cv::Point3f> &vP3D, 
             std::vector<bool> &vbTriangulated
-        ){return false;}
+        );
 
         cv::Mat toK();
         Eigen::Matrix3f toK_();

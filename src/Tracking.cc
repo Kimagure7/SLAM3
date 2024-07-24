@@ -220,6 +220,7 @@ bool Tracking::ParseCamParamFile(cv::FileStorage &fSettings)
     bool b_miss_params = false;
 
     string sCameraName = fSettings["Camera.type"];
+    mpCameraName = sCameraName;
     if(sCameraName == "PinHole")
     {
         float fx, fy, cx, cy;
@@ -345,7 +346,7 @@ bool Tracking::ParseCamParamFile(cv::FileStorage &fSettings)
         vector<float> vCamCalib{fx,fy,cx,cy};
 
         mpCamera = new Pinhole(vCamCalib);
-
+        
         mpCamera = mpAtlas->AddCamera(mpCamera);
 
         std::cout << "- Camera: Pinhole" << std::endl;
@@ -2181,22 +2182,24 @@ void Tracking::MonocularInitialization()
             vbTriangulated
         );
         std::cout << "init_success=" << reconstruct_success << endl;
-        if (!reconstruct_success) {
-            reconstruct_success = mpCamera->ReconstructWithTwoViewsAndTags(
-                mInitialFrame.markerIds,
-                mCurrentFrame.markerIds,
-                mInitialFrame.markerCorners,
-                mCurrentFrame.markerCorners,
-                mInitialFrame.mvKeysUn,
-                mCurrentFrame.mvKeysUn,
-                mvIniMatches,
-                minit_tag_id,
-                minit_tag_size,
-                Tcw,
-                mvIniP3D,
-                vbTriangulated
-            );
-            std::cout << " tag_init_success=" << reconstruct_success << endl;
+        if (mpCameraName == "KannalaBrandt8"){
+            if (!reconstruct_success) {
+                reconstruct_success = mpCamera->ReconstructWithTwoViewsAndTags(
+                    mInitialFrame.markerIds,
+                    mCurrentFrame.markerIds,
+                    mInitialFrame.markerCorners,
+                    mCurrentFrame.markerCorners,
+                    mInitialFrame.mvKeysUn,
+                    mCurrentFrame.mvKeysUn,
+                    mvIniMatches,
+                    minit_tag_id,
+                    minit_tag_size,
+                    Tcw,
+                    mvIniP3D,
+                    vbTriangulated
+                );
+                std::cout << " tag_init_success=" << reconstruct_success << endl;
+            }
         }
 
         if (reconstruct_success) {

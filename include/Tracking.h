@@ -336,6 +336,7 @@ protected:
     double mTime_NewKF_Dec;
 
     GeometricCamera* mpCamera, *mpCamera2;
+    string mpCameraName;
 
     int initID, lastID;
 
