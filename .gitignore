@@ -16,13 +16,6 @@ Examples/RGB-D/rgbd_realsense_D435i
 
 Examples/RGB-D-Inertial/rgbd_inertial_realsense_D435i
 
-Examples/Monocular/mono_realsense_D435i
-Examples/Monocular/mono_euroc
-Examples/Monocular/mono_kitti
-Examples/Monocular/mono_tum
-Examples/Monocular/mono_tum_vi
-Examples/Monocular/mono_realsense_t265
-
 *zzytemp*
 
 Examples/Monocular-Inertial/mono_inertial_euroc
@@ -32,7 +25,7 @@ Examples/Monocular-Inertial/mono_inertial_realsense_D435i
 Examples/Monocular-Inertial/mono_inertial_realsense_D435i_2
 
 
-
+Examples/Calibration/bag/.*
 Examples/Calibration/recorder_realsense_D435i
 Examples/data/*
 *.bag
