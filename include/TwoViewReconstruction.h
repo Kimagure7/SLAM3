@@ -42,6 +42,15 @@ namespace ORB_SLAM3
         bool Reconstruct(const std::vector<cv::KeyPoint>& vKeys1, const std::vector<cv::KeyPoint>& vKeys2, const std::vector<int> &vMatches12,
                           Sophus::SE3f &T21, std::vector<cv::Point3f> &vP3D, std::vector<bool> &vbTriangulated);
 
+        bool ReconstructWithTag(
+            const std::vector<cv::KeyPoint>& vKeys1, 
+            const std::vector<cv::KeyPoint>& vKeys2, 
+            const std::vector<int> &vMatches12,
+            const Sophus::SE3f &T21,
+            std::vector<cv::Point3f> &vP3D, 
+            std::vector<bool> &vbTriangulated
+            );
+
     private:
 
         void FindHomography(std::vector<bool> &vbMatchesInliers, float &score, Eigen::Matrix3f &H21);
