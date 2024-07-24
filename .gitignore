@@ -36,7 +36,7 @@ Examples/Monocular-Inertial/mono_inertial_realsense_D435i_2
 Examples/Calibration/recorder_realsense_D435i
 
 *.bag
-
+*.mp4
 
 KeyFrameTrajectory.txt
 CameraTrajectory.txt
