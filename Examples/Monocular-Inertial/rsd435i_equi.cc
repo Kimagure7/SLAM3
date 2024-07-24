@@ -24,7 +24,6 @@ void signal_callback_handler(int signum) {
 
 bool LoadTelemetry(const string &path_to_telemetry_file,
                    vector<double> &vTimeStamps,
-                   vector<double> &coriTimeStamps,
                    vector<cv::Point3f> &vAcc,
                    vector<cv::Point3f> &vGyro) {
 
@@ -35,9 +34,8 @@ bool LoadTelemetry(const string &path_to_telemetry_file,
     }
     json j;
     file >> j;
-    const auto accl = j["1"]["streams"]["ACCL"]["samples"]; //加速度计
-    const auto gyro = j["1"]["streams"]["GYRO"]["samples"]; //陀螺仪
-    const auto cori = j["1"]["streams"]["CORI"]["samples"]; //相机角度
+    const auto accl = j["streams"]["ACCL"]["samples"]; //加速度计
+    const auto gyro = j["streams"]["GYRO"]["samples"]; //陀螺仪
     std::map<double, cv::Point3f> sorted_acc;
     std::map<double, cv::Point3f> sorted_gyr;
 
@@ -58,10 +56,6 @@ bool LoadTelemetry(const string &path_to_telemetry_file,
     for (auto gyr : sorted_gyr) {
         vGyro.push_back(gyr.second);
     }
-    for (const auto &e : cori) {
-        coriTimeStamps.push_back((double)e["cts"] * MS_TO_S);
-    }
-
     file.close();
     return true;
 }
@@ -136,10 +130,8 @@ int main(int argc, char **argv) {
   cv::setNumThreads(num_threads);
 
   vector<double> imuTimestamps;
-  vector<double> camTimestamps;
   vector<cv::Point3f> vAcc, vGyr;
-  LoadTelemetry(input_imu_json, imuTimestamps, camTimestamps, vAcc, vGyr);
-
+  LoadTelemetry(input_imu_json, imuTimestamps,vAcc, vGyr);
   // open setting to get image resolution
   cv::FileStorage fsSettings(setting, cv::FileStorage::READ);
   if(!fsSettings.isOpened()) {
