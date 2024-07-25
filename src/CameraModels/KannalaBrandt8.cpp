@@ -247,7 +247,7 @@ namespace ORB_SLAM3 {
         cv::fisheye::undistortPoints(markerCorners1[tag_idx1], tag1Corners[0], Kc,Dc,Rc,Kc);
         cv::fisheye::undistortPoints(markerCorners2[tag_idx2], tag2Corners[0], Kc,Dc,Rc,Kc);
 
-        // localize tags
+        // localize tags 前面已经校正过了所以这里全都是1就可以了
         cv::Mat distCoeffs = cv::Mat1f(5, 1);
         std::vector<cv::Vec3d> rvecs1, tvecs1, rvecs2, tvecs2;
         cv::aruco::estimatePoseSingleMarkers(tag1Corners, tag_size, Kc, distCoeffs, rvecs1, tvecs1);
