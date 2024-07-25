@@ -1798,15 +1798,19 @@ void Tracking::Track()
             if(bOK)
             {
                 bOK = TrackLocalMap();
-                cout << "Done TrackLocalMap() line 1801" << endl;
+                //cout << "Done TrackLocalMap() line 1801" << endl;
             }
             if(!bOK){
-                cout << "Fail to track local map!" << endl;
+                
                 if (mbLoadedMap){
                     // if we loaded map from file, it means we are running relocalization
                     // in that case we don't want to reset current map
                     // instead we should try to relocalize
                     mState = INIT_RELOCALIZE;
+                    cout << "Failed to track local map. Trying to relocalize..." << endl;
+                }
+                else{
+                    cout << "Fail to track local map!" << endl;
                 }
             }
         }
