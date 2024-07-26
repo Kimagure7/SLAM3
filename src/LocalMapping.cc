@@ -135,7 +135,7 @@ void LocalMapping::Run()
                 // Initialize IMU here
                 if(!mpCurrentKeyFrame->GetMap()->isImuInitialized() && mbInertial)
                 {
-                    std::cout<<"Trying to initialize IMU\n";
+                    //std::cout<<"Trying to initialize IMU"<<mbMonocular<<endl;
                     if (mbMonocular)
                         InitializeIMU(1e2, 1e10, true);
                     else
@@ -1111,8 +1111,11 @@ bool LocalMapping::isFinished()
 
 void LocalMapping::InitializeIMU(float priorG, float priorA, bool bFIBA)
 {
-    if (mbResetRequested)
+    //cout << "Initializing IMU in Local Mapping222" << endl;
+    if (mbResetRequested){
+        cout << "Reset requested in LM" << endl;
         return;
+    }
 
     float minTime;
     int nMinKF;
@@ -1127,9 +1130,10 @@ void LocalMapping::InitializeIMU(float priorG, float priorA, bool bFIBA)
         nMinKF = 10;
     }
 
-
-    if(mpAtlas->KeyFramesInMap()<nMinKF)
+    if(mpAtlas->KeyFramesInMap()<nMinKF){
+        cout<<"Not enough KFs for initialization in mpAtlas "<<mpAtlas->KeyFramesInMap()<<endl;
         return;
+    }
 
     // Retrieve all keyframe in temporal order
     list<KeyFrame*> lpKF;
@@ -1141,14 +1145,16 @@ void LocalMapping::InitializeIMU(float priorG, float priorA, bool bFIBA)
     }
     lpKF.push_front(pKF);
     vector<KeyFrame*> vpKF(lpKF.begin(),lpKF.end());
-
-    if(vpKF.size()<nMinKF)
+    if(vpKF.size()<nMinKF){
+        cout<<"Not enough KFs for initialization in vpKF"<<vpKF.size()<<endl;
         return;
+    }
 
     mFirstTs=vpKF.front()->mTimeStamp;
-    if(mpCurrentKeyFrame->mTimeStamp-mFirstTs<minTime)
+    if(mpCurrentKeyFrame->mTimeStamp-mFirstTs<minTime){
+        cout << "Not enough time for initialization" <<mpCurrentKeyFrame->mTimeStamp-mFirstTs <<endl;
         return;
-
+    }
     bInitializing = true;
 
     while(CheckNewKeyFrames())
@@ -1160,7 +1166,6 @@ void LocalMapping::InitializeIMU(float priorG, float priorA, bool bFIBA)
 
     const int N = vpKF.size();
     IMU::Bias b(0,0,0,0,0,0);
-
     // Compute and KF velocities mRwg estimation
     if (!mpCurrentKeyFrame->GetMap()->isImuInitialized())
     {
@@ -1204,14 +1209,11 @@ void LocalMapping::InitializeIMU(float priorG, float priorA, bool bFIBA)
 
     std::chrono::steady_clock::time_point t0 = std::chrono::steady_clock::now();
     Optimizer::InertialOptimization(mpAtlas->GetCurrentMap(), mRwg, mScale, mbg, mba, mbMonocular, infoInertial, false, false, priorG, priorA);
-
     std::chrono::steady_clock::time_point t1 = std::chrono::steady_clock::now();
-    std::cout<<"Init mbg: "<<mbg<<"\n";
-    std::cout<<"Init mba: "<<mba<<"\n";
 
     if (mScale<1e-1)
     {
-        cout << "scale too small" << endl;
+        cout << "scale too small: " <<mScale<< endl;
         bInitializing=false;
         return;
     }
@@ -1249,7 +1251,6 @@ void LocalMapping::InitializeIMU(float priorG, float priorA, bool bFIBA)
         else
             Optimizer::FullInertialBA(mpAtlas->GetCurrentMap(), 100, false, mpCurrentKeyFrame->mnId, NULL, false);
     }
-
     std::chrono::steady_clock::time_point t5 = std::chrono::steady_clock::now();
 
     Verbose::PrintMess("Global Bundle Adjustment finished\nUpdating map ...", Verbose::VERBOSITY_NORMAL);
@@ -1363,7 +1364,7 @@ void LocalMapping::InitializeIMU(float priorG, float priorA, bool bFIBA)
     bInitializing = false;
 
     mpCurrentKeyFrame->GetMap()->IncreaseChangeIndex();
-
+    cout<<"Initialization IMU finished"<<endl;
     return;
 }
 
