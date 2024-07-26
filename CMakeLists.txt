@@ -194,6 +194,10 @@ add_executable(gopro_slam
 Examples/Monocular-Inertial/gopro_slam.cc)
 target_link_libraries(gopro_slam ${PROJECT_NAME})
 
+add_executable(rsd435i_rt
+Examples/Monocular-Inertial/rsd435i_rt.cc)
+target_link_libraries(rsd435i_rt ${PROJECT_NAME})
+
 # set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/Examples/Calibration)
 # if(realsense2_FOUND)
 #     add_executable(recorder_realsense_D435i
