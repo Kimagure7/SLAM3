@@ -138,62 +138,66 @@ if(realsense2_FOUND)
 endif()
 
 
-# Build examples
+# # Build examples
 
-# RGB-D examples
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/Examples/RGB-D)
+# # RGB-D examples
+# set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/Examples/RGB-D)
 
-if(realsense2_FOUND)
-    add_executable(rgbd_realsense_D435i
-            Examples/RGB-D/rgbd_realsense_D435i.cc)
-    target_link_libraries(rgbd_realsense_D435i ${PROJECT_NAME})
-endif()
-
-
-# RGB-D inertial examples
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/Examples/RGB-D-Inertial)
-
-if(realsense2_FOUND)
-    add_executable(rgbd_inertial_realsense_D435i
-            Examples/RGB-D-Inertial/rgbd_inertial_realsense_D435i.cc)
-    target_link_libraries(rgbd_inertial_realsense_D435i ${PROJECT_NAME})
-endif()
+# if(realsense2_FOUND)
+#     add_executable(rgbd_realsense_D435i
+#             Examples/RGB-D/rgbd_realsense_D435i.cc)
+#     target_link_libraries(rgbd_realsense_D435i ${PROJECT_NAME})
+# endif()
 
 
-#Monocular examples
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/Examples/Monocular)
+# # RGB-D inertial examples
+# set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/Examples/RGB-D-Inertial)
+
+# if(realsense2_FOUND)
+#     add_executable(rgbd_inertial_realsense_D435i
+#             Examples/RGB-D-Inertial/rgbd_inertial_realsense_D435i.cc)
+#     target_link_libraries(rgbd_inertial_realsense_D435i ${PROJECT_NAME})
+# endif()
 
 
-add_executable(mono_gopro
-Examples/Monocular/mono_gopro.cc)
-target_link_libraries(mono_gopro ${PROJECT_NAME})
+# #Monocular examples
+# set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/Examples/Monocular)
 
-if(realsense2_FOUND)
-    add_executable(mono_realsense_D435i
-            Examples/Monocular/mono_realsense_D435i.cc)
-    target_link_libraries(mono_realsense_D435i ${PROJECT_NAME})
-endif()
+
+# add_executable(mono_gopro
+# Examples/Monocular/mono_gopro.cc)
+# target_link_libraries(mono_gopro ${PROJECT_NAME})
+
+# if(realsense2_FOUND)
+#     add_executable(mono_realsense_D435i
+#             Examples/Monocular/mono_realsense_D435i.cc)
+#     target_link_libraries(mono_realsense_D435i ${PROJECT_NAME})
+# endif()
 
 #Monocular inertial examples
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/Examples/Monocular-Inertial)
 
-add_executable(mono_inertial_gopro_vi
-Examples/Monocular-Inertial/mono_inertial_gopro_vi.cc)
-target_link_libraries(mono_inertial_gopro_vi ${PROJECT_NAME})
-if(realsense2_FOUND)
-    add_executable(mono_inertial_realsense_D435i
-            Examples/Monocular-Inertial/mono_inertial_realsense_D435i.cc)
-    target_link_libraries(mono_inertial_realsense_D435i ${PROJECT_NAME})
-endif()
+# add_executable(mono_inertial_gopro_vi
+# Examples/Monocular-Inertial/mono_inertial_gopro_vi.cc)
+# target_link_libraries(mono_inertial_gopro_vi ${PROJECT_NAME})
+# if(realsense2_FOUND)
+#     add_executable(mono_inertial_realsense_D435i
+#             Examples/Monocular-Inertial/mono_inertial_realsense_D435i.cc)
+#     target_link_libraries(mono_inertial_realsense_D435i ${PROJECT_NAME})
+# endif()
 
 add_executable(rsd435i_equi
 Examples/Monocular-Inertial/rsd435i_equi.cc)
 target_link_libraries(rsd435i_equi ${PROJECT_NAME})
 
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/Examples/Calibration)
-if(realsense2_FOUND)
-    add_executable(recorder_realsense_D435i
-            Examples/Calibration/recorder_realsense_D435i.cc)
-    target_link_libraries(recorder_realsense_D435i ${PROJECT_NAME})
-endif()
+add_executable(gopro_slam
+Examples/Monocular-Inertial/gopro_slam.cc)
+target_link_libraries(gopro_slam ${PROJECT_NAME})
+
+# set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/Examples/Calibration)
+# if(realsense2_FOUND)
+#     add_executable(recorder_realsense_D435i
+#             Examples/Calibration/recorder_realsense_D435i.cc)
+#     target_link_libraries(recorder_realsense_D435i ${PROJECT_NAME})
+# endif()
 
