@@ -115,6 +115,7 @@ namespace ORB_SLAM3 {
         auto tag_iter2 = std::find(markerIds2.begin(), markerIds2.end(), tag_id);
         if ((tag_iter1 == markerIds1.end()) || (tag_iter2 == markerIds2.end())){
             // tag not detected in both frames return false
+            std::cout << "Tag not detected in both frames" << std::endl;
             return false;
         }
         int tag_idx1 = tag_iter1 - markerIds1.begin();
@@ -153,7 +154,8 @@ namespace ORB_SLAM3 {
 
         T21 = T2w * T1w.inverse();
         
-        return tvr->ReconstructWithTag(vKeys1,vKeys2,vMatches12,T21,vP3D,vbTriangulated);
+        std::vector<cv::KeyPoint> vKeys1VC= vKeys1, vKeys2VC = vKeys2;
+        return tvr->ReconstructWithTag(vKeys1VC,vKeys2VC,vMatches12,T21,vP3D,vbTriangulated);
     }
 
 
