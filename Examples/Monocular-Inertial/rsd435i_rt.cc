@@ -231,7 +231,7 @@ int main(int argc, char **argv)
     rs2::pipeline_profile pipe_profile = pipe.start(cfg, imu_callback);
 
     vector<ORB_SLAM3::IMU::Point> vImuMeas;
-    rs2::stream_profile cam_stream = pipe_profile.get_stream(RS2_STREAM_COLOR, -1);
+    rs2::stream_profile cam_stream = pipe_profile.get_stream(RS2_STREAM_COLOR);
 
     rs2::stream_profile imu_stream = pipe_profile.get_stream(RS2_STREAM_GYRO);
     float *Rbc = cam_stream.get_extrinsics_to(imu_stream).rotation;
