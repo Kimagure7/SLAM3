@@ -48,7 +48,7 @@ Tracking::Tracking(System *pSys, ORBVocabulary* pVoc, FrameDrawer *pFrameDrawer,
     mState(NO_IMAGES_YET), mSensor(sensor), mTrackedFr(0), mbStep(false),
     mbOnlyTracking(false), mbMapUpdated(false), mbVO(false), mpORBVocabulary(pVoc), mpKeyFrameDB(pKFDB),
     mbReadyToInitializate(false), mpSystem(pSys), mpViewer(NULL), bStepByStep(false),
-    mpFrameDrawer(pFrameDrawer), mpMapDrawer(pMapDrawer), mpAtlas(pAtlas), mnLastRelocFrameId(0), time_recently_lost(0.2),
+    mpFrameDrawer(pFrameDrawer), mpMapDrawer(pMapDrawer), mpAtlas(pAtlas), mnLastRelocFrameId(0), time_recently_lost(1),
     mnInitialFrameId(0), mbCreatedMap(false), mnFirstFrameId(0), mpCamera2(nullptr), mpLastKeyFrame(static_cast<KeyFrame*>(NULL)),
     maruco_dict(aruco_dict), minit_tag_id(init_tag_id), minit_tag_size(init_tag_size)
 {
@@ -1478,7 +1478,7 @@ void Tracking::Track()
             mLastFrame = mCurrentFrame;
         } else {
             // trigger initialization.
-            cout << "line 1873 keyframes " << pCurrentMap->KeyFramesInMap() << "MapPoints" << pCurrentMap->MapPointsInMap() << endl;
+            cout << "line 1481 keyframes " << pCurrentMap->KeyFramesInMap() << " MapPoints " << pCurrentMap->MapPointsInMap() << endl;
             if (pCurrentMap->KeyFramesInMap() == 0){
                 mState = NOT_INITIALIZED;
             } else {
@@ -1489,6 +1489,7 @@ void Tracking::Track()
                 mState = INIT_RELOCALIZE;
             }
         }
+        cout << "No images yet. "<<mState<<endl;
     }
 
     mLastProcessedState=mState;
@@ -1527,9 +1528,9 @@ void Tracking::Track()
         mpFrameDrawer->Update(this);
 
         if(mState!=OK) // If rightly initialized, mState=OK
-        {
+        { 
             mLastFrame = Frame(mCurrentFrame);
-            cout<<"Initialization failed! tracking:1533.Still record the frames."<<endl;
+            //cout<<"Initialization failed! tracking:1533.Still record the frames. mState "<< mState <<endl;
             mlRelativeFramePoses.push_back(mlRelativeFramePoses.back());
             mlpReferences.push_back(mlpReferences.back());
             mlFrameTimes.push_back(mlFrameTimes.back());
@@ -1583,7 +1584,7 @@ void Tracking::Track()
                     }
                     else if(pCurrentMap->KeyFramesInMap()>10)
                     {
-                        // cout << "KF in map: " << pCurrentMap->KeyFramesInMap() << endl;
+                        cout << "Recently lost, KF in map: " << pCurrentMap->KeyFramesInMap() << endl;
                         mState = RECENTLY_LOST;
                         mTimeStampLost = mCurrentFrame.mTimeStamp;
                     }
@@ -2156,10 +2157,10 @@ void Tracking::MonocularInitialization()
     }
     else
     {
-        if (((int)mCurrentFrame.mvKeys.size()<=100)||((mSensor == System::IMU_MONOCULAR)&&(mLastFrame.mTimeStamp-mInitialFrame.mTimeStamp>0.3)))
+        if (((int)mCurrentFrame.mvKeys.size()<=100)||((mSensor == System::IMU_MONOCULAR)&&(mLastFrame.mTimeStamp-mInitialFrame.mTimeStamp>0.31)))
         {
             mbReadyToInitializate = false;
-            std::cout << "Failed to init: n_keypoints " << (int)mCurrentFrame.mvKeys.size() << " time_since_init_frame" << mLastFrame.mTimeStamp-mInitialFrame.mTimeStamp << std::endl;
+            std::cout << "Failed to init: n_keypoints " << (int)mCurrentFrame.mvKeys.size() << " time_since_init_frame  " << mLastFrame.mTimeStamp-mInitialFrame.mTimeStamp << std::endl;
             return;
         }
 
@@ -2434,7 +2435,7 @@ bool Tracking::TrackReferenceKeyFrame()
 
     if(nmatches<15)
     {
-        cout << "TRACK_REF_KF: Less than 15 matches!!\n";
+        cout << "TRACK_REF_KF: Less than 15 matches!! current match = "<< nmatches << endl;
         return false;
     }
 
@@ -2735,7 +2736,7 @@ bool Tracking::TrackLocalMap()
     // More restrictive if there was a relocalization recently
     mpLocalMapper->mnMatchesInliers=mnMatchesInliers;
     if(mCurrentFrame.mnId<mnLastRelocFrameId+mMaxFrames && mnMatchesInliers<30){
-        cout << "TrackLocalMap() mCurrentFrame.mnId<mnLastRelocFrameId+mMaxFrames && mnMatchesInliers<50" << " = " << mnMatchesInliers << endl;
+        cout << "TrackLocalMap() mCurrentFrame.mnId<mnLastRelocFrameId+mMaxFrames && mnMatchesInliers<30" << " = " << mnMatchesInliers << endl;
         return false;
     }
 
@@ -2745,12 +2746,13 @@ bool Tracking::TrackLocalMap()
 
     if (mSensor == System::IMU_MONOCULAR)
     {
+        //std::cout<< "Imu initialized: " << mpAtlas->isImuInitialized() << std::endl;
         if((mnMatchesInliers<15 && mpAtlas->isImuInitialized()))
         {
             cout << "TrackLocalMap() mnMatchesInliers<15 && mpAtlas->isImuInitialized()" << " = " << mnMatchesInliers << endl;
             return false;
-        } else if (mnMatchesInliers<50 && !mpAtlas->isImuInitialized()){
-            cout << "TrackLocalMap() mnMatchesInliers<50 && !mpAtlas->isImuInitialized()" << " = " << mnMatchesInliers << endl;
+        } else if (mnMatchesInliers<45 && !mpAtlas->isImuInitialized()){
+            cout << "TrackLocalMap() mnMatchesInliers<45 && !mpAtlas->isImuInitialized()" << " = " << mnMatchesInliers << endl;
             return false;
         }
         else {
