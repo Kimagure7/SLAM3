@@ -199,6 +199,7 @@ public:
 
     float GetImageScale();
     bool isLoadingMap();
+    void SaveAtlas(int type,const string &atlasFilePath,const string &orbFilePath);
 
 private:
 

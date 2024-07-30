@@ -346,6 +346,7 @@ int main(int argc, char **argv)
         vImuMeas.clear();
     }
     cout << "System shutdown!\n";
+    SLAM.SaveAtlas(ORB_SLAM3::System::FileType::BINARY_FILE, save_map,vocabulary);
     // Save camera trajectory
     if (!output_trajectory_tum.empty())
     {
