@@ -17,7 +17,7 @@ Examples/RGB-D/rgbd_realsense_D435i
 Examples/RGB-D-Inertial/rgbd_inertial_realsense_D435i
 
 *zzytemp*
-
+.vscode/
 Examples/Monocular-Inertial/mono_inertial_euroc
 Examples/Monocular-Inertial/mono_inertial_tum_vi
 Examples/Monocular-Inertial/mono_inertial_realsense_t265

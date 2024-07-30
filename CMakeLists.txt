@@ -186,13 +186,13 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/Examples/Monocular-Iner
 #     target_link_libraries(mono_inertial_realsense_D435i ${PROJECT_NAME})
 # endif()
 
-add_executable(rsd435i_equi
+add_executable(rsd435i_offline
 Examples/Monocular-Inertial/rsd435i_equi.cc)
 target_link_libraries(rsd435i_equi ${PROJECT_NAME})
 
-add_executable(gopro_slam
-Examples/Monocular-Inertial/gopro_slam.cc)
-target_link_libraries(gopro_slam ${PROJECT_NAME})
+# add_executable(gopro_slam
+# Examples/Monocular-Inertial/gopro_slam.cc)
+# target_link_libraries(gopro_slam ${PROJECT_NAME})
 
 add_executable(rsd435i_rt
 Examples/Monocular-Inertial/rsd435i_rt.cc)
