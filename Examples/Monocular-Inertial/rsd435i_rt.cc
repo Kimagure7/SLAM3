@@ -1,28 +1,27 @@
-#include <signal.h>
-#include <stdlib.h>
-#include <iostream>
 #include <algorithm>
-#include <fstream>
 #include <chrono>
 #include <ctime>
+#include <fstream>
+#include <iostream>
+#include <signal.h>
 #include <sstream>
+#include <stdlib.h>
 
 #include <condition_variable>
 
 #include <opencv2/core/core.hpp>
 #include <opencv2/imgproc.hpp>
 
-#include <librealsense2/rs.hpp>
 #include "librealsense2/rsutil.h"
-#include <json.h>
 #include <CLI11.hpp>
 #include <System.h>
+#include <json.h>
+#include <librealsense2/rs.hpp>
 
 using namespace std;
 using nlohmann::json;
 
-void signal_callback_handler(int signum)
-{
+void signal_callback_handler(int signum) {
     cout << "gopro_slam.cc Caught signal " << signum << endl;
     // Terminate program
     exit(signum);
@@ -31,13 +30,12 @@ rs2_vector interpolateMeasure(const double target_time,
                               const rs2_vector current_data, const double current_time,
                               const rs2_vector prev_data, const double prev_time);
 
-int main(int argc, char **argv)
-{
+int main(int argc, char **argv) {
 
     signal(SIGINT, signal_callback_handler);
 
     // CLI parsing
-    CLI::App app{"D435i SLAM"};
+    CLI::App app{ "D435i SLAM" };
 
     std::string vocabulary = "../../Vocabulary/ORBvoc.txt";
     app.add_option("-v,--vocabulary", vocabulary)->capture_default_str();
@@ -67,15 +65,12 @@ int main(int argc, char **argv)
     int init_tag_id = 13;
     app.add_option("--init_tag_id", init_tag_id);
 
-    float init_tag_size = 0.16; // in meters
+    float init_tag_size = 0.16;    // in meters
     app.add_option("--init_tag_size", init_tag_size);
 
-    try
-    {
+    try {
         app.parse(argc, argv);
-    }
-    catch (const CLI::ParseError &e)
-    {
+    } catch(const CLI::ParseError &e) {
         return app.exit(e);
     }
     // if lost more than max_lost_frames, terminate
@@ -87,41 +82,35 @@ int main(int argc, char **argv)
          << "\noutput_trajectory_tum: " << output_trajectory_tum
          << "\noutput_trajectory_csv: " << output_trajectory_csv
          << endl;
-    double offset = 0; // ms
+    double offset = 0;    // ms
 
     rs2::context ctx;
     rs2::device_list devices = ctx.query_devices();
     rs2::device selected_device;
-    if (devices.size() == 0)
-    {
+    if(devices.size() == 0) {
         std::cerr << "No device connected, please connect a RealSense device" << std::endl;
         return 0;
-    }
-    else
+    } else
         selected_device = devices[0];
 
-    std::vector<rs2::sensor> sensors = selected_device.query_sensors();
-    int index = 0;
+    std::vector< rs2::sensor > sensors = selected_device.query_sensors();
+    int index                          = 0;
     // We can now iterate the sensors and print their names
-    for (rs2::sensor sensor : sensors)
-        if (sensor.supports(RS2_CAMERA_INFO_NAME))
-        {
+    for(rs2::sensor sensor : sensors)
+        if(sensor.supports(RS2_CAMERA_INFO_NAME)) {
             ++index;
-            if (index == 1)
-            {
+            if(index == 1) {
                 sensor.set_option(RS2_OPTION_ENABLE_AUTO_EXPOSURE, 1);
                 // sensor.set_option(RS2_OPTION_AUTO_EXPOSURE_LIMIT,5000);
-                sensor.set_option(RS2_OPTION_EMITTER_ENABLED, 0); // switch off emitter
+                sensor.set_option(RS2_OPTION_EMITTER_ENABLED, 0);    // switch off emitter
             }
             std::cout << "  " << index << " : " << sensor.get_info(RS2_CAMERA_INFO_NAME) << std::endl;
-            if (index == 2)
-            {
+            if(index == 2) {
                 // RGB camera (not used here...)
                 sensor.set_option(RS2_OPTION_ENABLE_AUTO_EXPOSURE, 1);
             }
 
-            if (index == 3)
-            {
+            if(index == 3) {
                 sensor.set_option(RS2_OPTION_ENABLE_MOTION_CORRECTION, 0);
             }
         }
@@ -140,50 +129,46 @@ int main(int argc, char **argv)
     std::mutex imu_mutex;
     std::condition_variable cond_image_rec;
 
-    vector<double> v_accel_timestamp;
-    vector<rs2_vector> v_accel_data;
-    vector<double> v_gyro_timestamp;
-    vector<rs2_vector> v_gyro_data;
+    vector< double > v_accel_timestamp;
+    vector< rs2_vector > v_accel_data;
+    vector< double > v_gyro_timestamp;
+    vector< rs2_vector > v_gyro_data;
 
     double prev_accel_timestamp = 0;
     rs2_vector prev_accel_data;
     double current_accel_timestamp = 0;
     rs2_vector current_accel_data;
-    vector<double> v_accel_timestamp_sync;
-    vector<rs2_vector> v_accel_data_sync;
+    vector< double > v_accel_timestamp_sync;
+    vector< rs2_vector > v_accel_data_sync;
 
     cv::Mat imCV;
     int width_img, height_img;
     double timestamp_image = -1.0;
-    bool image_ready = false;
-    int count_im_buffer = 0; // count dropped frames
+    bool image_ready       = false;
+    int count_im_buffer    = 0;    // count dropped frames
 
-    auto imu_callback = [&](const rs2::frame &frame)
-    {
-        std::unique_lock<std::mutex> lock(imu_mutex);
+    auto imu_callback = [&](const rs2::frame &frame) {
+        std::unique_lock< std::mutex > lock(imu_mutex);
 
-        if (rs2::frameset fs = frame.as<rs2::frameset>())
-        {
+        if(rs2::frameset fs = frame.as< rs2::frameset >()) {
             count_im_buffer++;
 
             double new_timestamp_image = fs.get_timestamp() * 1e-3;
-            if (abs(timestamp_image - new_timestamp_image) < 0.001)
-            {
+            if(abs(timestamp_image - new_timestamp_image) < 0.001) {
                 // cout << "Two frames with the same timeStamp!!!\n";
                 count_im_buffer--;
                 return;
             }
 
             rs2::video_frame color_frame = fs.get_color_frame();
-            imCV = cv::Mat(cv::Size(width_img, height_img), CV_8UC3, (void *)(color_frame.get_data()), cv::Mat::AUTO_STEP);
+            imCV                         = cv::Mat(cv::Size(width_img, height_img), CV_8UC3, (void *)(color_frame.get_data()), cv::Mat::AUTO_STEP);
 
             timestamp_image = fs.get_timestamp() * 1e-3;
-            image_ready = true;
+            image_ready     = true;
 
-            while (v_gyro_timestamp.size() > v_accel_timestamp_sync.size())
-            {
+            while(v_gyro_timestamp.size() > v_accel_timestamp_sync.size()) {
 
-                int index = v_accel_timestamp_sync.size();
+                int index          = v_accel_timestamp_sync.size();
                 double target_time = v_gyro_timestamp[index];
 
                 v_accel_data_sync.push_back(current_accel_data);
@@ -192,30 +177,24 @@ int main(int argc, char **argv)
 
             lock.unlock();
             cond_image_rec.notify_all();
-        }
-        else if (rs2::motion_frame m_frame = frame.as<rs2::motion_frame>())
-        {
-            if (m_frame.get_profile().stream_name() == "Gyro")
-            {
+        } else if(rs2::motion_frame m_frame = frame.as< rs2::motion_frame >()) {
+            if(m_frame.get_profile().stream_name() == "Gyro") {
                 // It runs at 200Hz
                 v_gyro_data.push_back(m_frame.get_motion_data());
                 v_gyro_timestamp.push_back((m_frame.get_timestamp() + offset) * 1e-3);
                 // rs2_vector gyro_sample = m_frame.get_motion_data();
                 // std::cout << "Gyro:" << gyro_sample.x << ", " << gyro_sample.y << ", " << gyro_sample.z << std::endl;
-            }
-            else if (m_frame.get_profile().stream_name() == "Accel")
-            {
+            } else if(m_frame.get_profile().stream_name() == "Accel") {
                 // It runs at 60Hz
                 prev_accel_timestamp = current_accel_timestamp;
-                prev_accel_data = current_accel_data;
+                prev_accel_data      = current_accel_data;
 
-                current_accel_data = m_frame.get_motion_data();
+                current_accel_data      = m_frame.get_motion_data();
                 current_accel_timestamp = (m_frame.get_timestamp() + offset) * 1e-3;
 
-                while (v_gyro_timestamp.size() > v_accel_timestamp_sync.size())
-                {
-                    int index = v_accel_timestamp_sync.size();
-                    double target_time = v_gyro_timestamp[index]; // 其实是下一个gyro的时间
+                while(v_gyro_timestamp.size() > v_accel_timestamp_sync.size()) {
+                    int index          = v_accel_timestamp_sync.size();
+                    double target_time = v_gyro_timestamp[index];    // 其实是下一个gyro的时间
 
                     rs2_vector interp_data = interpolateMeasure(target_time, current_accel_data, current_accel_timestamp,
                                                                 prev_accel_data, prev_accel_timestamp);
@@ -230,23 +209,22 @@ int main(int argc, char **argv)
 
     rs2::pipeline_profile pipe_profile = pipe.start(cfg, imu_callback);
 
-    vector<ORB_SLAM3::IMU::Point> vImuMeas;
+    vector< ORB_SLAM3::IMU::Point > vImuMeas;
     rs2::stream_profile cam_stream = pipe_profile.get_stream(RS2_STREAM_COLOR);
 
     rs2::stream_profile imu_stream = pipe_profile.get_stream(RS2_STREAM_GYRO);
-    float *Rbc = cam_stream.get_extrinsics_to(imu_stream).rotation;
-    float *tbc = cam_stream.get_extrinsics_to(imu_stream).translation;
+    float *Rbc                     = cam_stream.get_extrinsics_to(imu_stream).rotation;
+    float *tbc                     = cam_stream.get_extrinsics_to(imu_stream).translation;
     std::cout << "Tbc = " << std::endl;
-    for (int i = 0; i < 3; i++)
-    {
-        for (int j = 0; j < 3; j++)
+    for(int i = 0; i < 3; i++) {
+        for(int j = 0; j < 3; j++)
             std::cout << Rbc[i * 3 + j] << ", ";
         std::cout << tbc[i] << "\n";
     }
 
-    rs2_intrinsics intrinsics_cam = cam_stream.as<rs2::video_stream_profile>().get_intrinsics();
-    width_img = intrinsics_cam.width;
-    height_img = intrinsics_cam.height;
+    rs2_intrinsics intrinsics_cam = cam_stream.as< rs2::video_stream_profile >().get_intrinsics();
+    width_img                     = intrinsics_cam.width;
+    height_img                    = intrinsics_cam.height;
     std::cout << " fx = " << intrinsics_cam.fx << std::endl;
     std::cout << " fy = " << intrinsics_cam.fy << std::endl;
     std::cout << " cx = " << intrinsics_cam.ppx << std::endl;
@@ -257,7 +235,7 @@ int main(int argc, char **argv)
     std::cout << " Model = " << intrinsics_cam.model << std::endl;
 
     // Create SLAM system. It initializes all system threads and gets ready to process frames.
-    cv::Ptr<cv::aruco::Dictionary> aruco_dict = cv::aruco::getPredefinedDictionary(aruco_dict_id);
+    cv::Ptr< cv::aruco::Dictionary > aruco_dict = cv::aruco::getPredefinedDictionary(aruco_dict_id);
     ORB_SLAM3::System SLAM(
         vocabulary, setting,
         ORB_SLAM3::System::IMU_MONOCULAR,
@@ -275,29 +253,27 @@ int main(int argc, char **argv)
     v_accel_timestamp_sync.clear();
 
     double t_resize = 0.f;
-    double t_track = 0.f;
+    double t_track  = 0.f;
 
-    while (!SLAM.isShutDown())
-    {
-        std::vector<rs2_vector> vGyro;
-        std::vector<double> vGyro_times;
-        std::vector<rs2_vector> vAccel;
-        std::vector<double> vAccel_times;
+    while(!SLAM.isShutDown()) {
+        std::vector< rs2_vector > vGyro;
+        std::vector< double > vGyro_times;
+        std::vector< rs2_vector > vAccel;
+        std::vector< double > vAccel_times;
 
         {
-            std::unique_lock<std::mutex> lk(imu_mutex);
-            if (!image_ready)
+            std::unique_lock< std::mutex > lk(imu_mutex);
+            if(!image_ready)
                 cond_image_rec.wait(lk);
 
             std::chrono::steady_clock::time_point time_Start_Process = std::chrono::steady_clock::now();
 
-            if (count_im_buffer > 1) // 处理不过来 丢帧咯
+            if(count_im_buffer > 1)    // 处理不过来 丢帧咯
                 cout << count_im_buffer - 1 << " dropped frs\n";
             count_im_buffer = 0;
 
-            while (v_gyro_timestamp.size() > v_accel_timestamp_sync.size())
-            { // 不断同步
-                int index = v_accel_timestamp_sync.size();
+            while(v_gyro_timestamp.size() > v_accel_timestamp_sync.size()) {    // 不断同步
+                int index          = v_accel_timestamp_sync.size();
                 double target_time = v_gyro_timestamp[index];
 
                 rs2_vector interp_data = interpolateMeasure(target_time, current_accel_data, current_accel_timestamp, prev_accel_data, prev_accel_timestamp);
@@ -308,12 +284,12 @@ int main(int argc, char **argv)
             }
 
             // Copy the IMU data
-            vGyro = v_gyro_data;
-            vGyro_times = v_gyro_timestamp;
-            vAccel = v_accel_data_sync;
+            vGyro        = v_gyro_data;
+            vGyro_times  = v_gyro_timestamp;
+            vAccel       = v_accel_data_sync;
             vAccel_times = v_accel_timestamp_sync;
-            timestamp = timestamp_image;
-            im = imCV.clone();
+            timestamp    = timestamp_image;
+            im           = imCV.clone();
 
             // Clear IMU vectors
             v_gyro_data.clear();
@@ -324,17 +300,15 @@ int main(int argc, char **argv)
             image_ready = false;
         }
 
-        for (int i = 0; i < vGyro.size(); ++i)
-        {
+        for(int i = 0; i < vGyro.size(); ++i) {
             ORB_SLAM3::IMU::Point lastPoint(vAccel[i].x, vAccel[i].y, vAccel[i].z,
                                             vGyro[i].x, vGyro[i].y, vGyro[i].z,
                                             vGyro_times[i]);
             vImuMeas.push_back(lastPoint);
         }
 
-        if (imageScale != 1.f)
-        {
-            int width = im.cols * imageScale;
+        if(imageScale != 1.f) {
+            int width  = im.cols * imageScale;
             int height = im.rows * imageScale;
             cv::resize(im, im, cv::Size(width, height));
         }
@@ -346,15 +320,15 @@ int main(int argc, char **argv)
         vImuMeas.clear();
     }
     cout << "System shutdown!\n";
-    SLAM.SaveAtlas(ORB_SLAM3::System::FileType::BINARY_FILE, save_map,vocabulary);
+    if(load_map.empty() && !save_map.empty()) {
+        SLAM.SaveAtlas(ORB_SLAM3::System::FileType::BINARY_FILE, save_map, vocabulary);
+    }
     // Save camera trajectory
-    if (!output_trajectory_tum.empty())
-    {
+    if(!output_trajectory_tum.empty()) {
         SLAM.SaveTrajectoryTUM(output_trajectory_tum);
     }
 
-    if (!output_trajectory_csv.empty())
-    {
+    if(!output_trajectory_csv.empty()) {
         SLAM.SaveTrajectoryCSV(output_trajectory_csv);
     }
     return 0;
@@ -362,24 +336,19 @@ int main(int argc, char **argv)
 
 rs2_vector interpolateMeasure(const double target_time,
                               const rs2_vector current_data, const double current_time,
-                              const rs2_vector prev_data, const double prev_time)
-{
+                              const rs2_vector prev_data, const double prev_time) {
 
     // If there are not previous information, the current data is propagated
-    if (prev_time == 0)
-    {
+    if(prev_time == 0) {
         return current_data;
     }
 
     rs2_vector increment;
     rs2_vector value_interp;
 
-    if (target_time > current_time)
-    {
+    if(target_time > current_time) {
         value_interp = current_data;
-    }
-    else if (target_time > prev_time)
-    {
+    } else if(target_time > prev_time) {
         increment.x = current_data.x - prev_data.x;
         increment.y = current_data.y - prev_data.y;
         increment.z = current_data.z - prev_data.z;
@@ -392,9 +361,7 @@ rs2_vector interpolateMeasure(const double target_time,
 
         // zero interpolation
         value_interp = current_data;
-    }
-    else
-    {
+    } else {
         value_interp = prev_data;
     }
 
