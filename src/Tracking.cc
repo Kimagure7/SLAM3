@@ -47,7 +47,7 @@ Tracking::Tracking(System *pSys, ORBVocabulary *pVoc, FrameDrawer *pFrameDrawer,
     : mState(NO_IMAGES_YET), mSensor(sensor), mTrackedFr(0), mbStep(false),
       mbOnlyTracking(false), mbMapUpdated(false), mbVO(false), mpORBVocabulary(pVoc), mpKeyFrameDB(pKFDB),
       mbReadyToInitializate(false), mpSystem(pSys), mpViewer(NULL), bStepByStep(false),
-      mpFrameDrawer(pFrameDrawer), mpMapDrawer(pMapDrawer), mpAtlas(pAtlas), mnLastRelocFrameId(0), time_recently_lost(1),
+      mpFrameDrawer(pFrameDrawer), mpMapDrawer(pMapDrawer), mpAtlas(pAtlas), mnLastRelocFrameId(0), time_recently_lost(3),
       mnInitialFrameId(0), mbCreatedMap(false), mnFirstFrameId(0), mpCamera2(nullptr), mpLastKeyFrame(static_cast< KeyFrame * >(NULL)),
       maruco_dict(aruco_dict), minit_tag_id(init_tag_id), minit_tag_size(init_tag_size) {
     // Load camera parameters from settings file
@@ -1382,7 +1382,7 @@ void Tracking::Track() {
 
                         // update timestamps
                         cout << "vpKFs.back()->mpImuPreintegrated" << vpKFs.back()->mpImuPreintegrated << endl;
-                        double dt = 1.0 / 59.97;
+                        double dt = 1.0 / 29.97;
                         if(vpKFs.back()->mpImuPreintegrated != nullptr) {
                             double dt = vpKFs.back()->mpImuPreintegrated->dT;
                         }
