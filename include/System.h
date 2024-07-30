@@ -264,10 +264,10 @@ private:
     std::mutex mMutexState;
 
     //
-    string mStrLoadAtlasFromFile;
-    string mStrSaveAtlasToFile;
+    string atlasLoadFilePath;
+    string atlasSaveFilePath;
 
-    string mStrVocabularyFilePath;
+    string orbVocabularyFilePath;
 
     Settings* settings_;
 };

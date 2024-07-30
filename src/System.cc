@@ -82,8 +82,8 @@ System::System(const string &strVocFile, const string &strSettingsFile, const eS
 	if(!node.empty() && node.isString() && node.string() == "1.0") {
 		settings_ = new Settings(strSettingsFile, mSensor);
 		// 使用传入参数的路径
-		// mStrLoadAtlasFromFile = settings_->atlasLoadFile();
-		// mStrSaveAtlasToFile = settings_->atlasSaveFile();
+		// atlasLoadFilePath = settings_->atlasLoadFile();
+		// atlasSaveFilePath = settings_->atlasSaveFile();
 
 		cout << (*settings_) << endl;
 	} else {
@@ -92,8 +92,8 @@ System::System(const string &strVocFile, const string &strSettingsFile, const eS
 	}
 
 	// set load and save atlas
-	mStrLoadAtlasFromFile = load_atlas_path;
-	mStrSaveAtlasToFile   = save_atlas_path;
+	atlasLoadFilePath = load_atlas_path;
+	atlasSaveFilePath   = save_atlas_path;
 
 	// loop closing setting
 	node          = fsSettings["loopClosing"];
@@ -103,9 +103,9 @@ System::System(const string &strVocFile, const string &strSettingsFile, const eS
 	}
 
 	// Load ORB Vocabulary
-	mStrVocabularyFilePath = strVocFile;
+	orbVocabularyFilePath = strVocFile;
 	cout << endl
-	     << "Loading ORB Vocabulary. This could take a while..." << endl;
+	     << "Loading ORB Vocabulary. "<< orbVocabularyFilePath <<" This could take a while..." << endl;
 	mpVocabulary  = new ORBVocabulary();
 	bool bVocLoad = mpVocabulary->loadFromTextFile(strVocFile);
 	if(!bVocLoad) {
@@ -120,13 +120,13 @@ System::System(const string &strVocFile, const string &strSettingsFile, const eS
 	mpKeyFrameDatabase = new KeyFrameDatabase(*mpVocabulary);
 
 	// handle map loading
-	if(mStrLoadAtlasFromFile.empty()) {
+	if(atlasLoadFilePath.empty()) {
 		// Create the Atlas
 		cout << "Initialization of Atlas from scratch " << endl;
 		mpAtlas = new Atlas(0);
 	} else {
 		// Load the file with an earlier session
-		cout << "Initialization of Atlas from file: " << mStrLoadAtlasFromFile << endl;
+		cout << "Initialization of Atlas from file: " << atlasLoadFilePath << endl;
 		bool isRead = LoadAtlas(FileType::BINARY_FILE);
 
 		if(!isRead) {
@@ -518,7 +518,6 @@ void System::Shutdown() {
 	}
 
 	cout << "Shutdown" << endl;
-
 	mpLocalMapper->RequestFinish();
 	mpLoopCloser->RequestFinish();
 	/*if(mpViewer)
@@ -542,8 +541,8 @@ void System::Shutdown() {
 		usleep(5000);
 	}
 
-	if(!mStrSaveAtlasToFile.empty()) {
-		Verbose::PrintMess("Atlas saving to file " + mStrSaveAtlasToFile, Verbose::VERBOSITY_NORMAL);
+	if(!atlasSaveFilePath.empty()) {
+		Verbose::PrintMess("Atlas saving to file " + atlasSaveFilePath, Verbose::VERBOSITY_NORMAL);
 		SaveAtlas(FileType::BINARY_FILE);
 	}
 
@@ -1456,21 +1455,20 @@ float System::GetImageScale() {
 }
 
 void System::SaveAtlas(int type) {
-	if(!mStrSaveAtlasToFile.empty()) {
+	if(!atlasSaveFilePath.empty()) {
 		// clock_t start = clock();
 
 		// Save the current session
 		mpAtlas->PreSave();
 
-		string pathSaveFileName = mStrSaveAtlasToFile;
-
-		string strVocabularyChecksum = CalculateCheckSum(mStrVocabularyFilePath, TEXT_FILE);
-		std::size_t found            = mStrVocabularyFilePath.find_last_of("/\\");
-		string strVocabularyName     = mStrVocabularyFilePath.substr(found + 1);
+		string pathSaveFileName = atlasSaveFilePath;
+		string strVocabularyChecksum = CalculateCheckSum(orbVocabularyFilePath, TEXT_FILE);
+		std::size_t found            = orbVocabularyFilePath.find_last_of("/\\");
+		string strVocabularyName     = orbVocabularyFilePath.substr(found + 1);
 
 		if(type == TEXT_FILE)    // File text
 		{
-			cout << "Starting to write the save text file " << endl;
+			cout << "Starting to write the save text file to "<< pathSaveFileName << endl;
 			std::remove(pathSaveFileName.c_str());
 			std::ofstream ofs(pathSaveFileName, std::ios::binary);
 			boost::archive::text_oarchive oa(ofs);
@@ -1478,10 +1476,10 @@ void System::SaveAtlas(int type) {
 			oa << strVocabularyName;
 			oa << strVocabularyChecksum;
 			oa << mpAtlas;
-			cout << "End to write the save text file" << endl;
+			cout << "End to write the save text file to "<< pathSaveFileName << endl;
 		} else if(type == BINARY_FILE)	  // File binary
 		{
-			cout << "Starting to write the save binary file" << endl;
+			cout << "Starting to write the save binary file to "<< pathSaveFileName<< endl;
 			std::remove(pathSaveFileName.c_str());
 			std::ofstream ofs(pathSaveFileName, std::ios::binary);
 			boost::archive::binary_oarchive oa(ofs);
@@ -1497,7 +1495,7 @@ bool System::LoadAtlas(int type) {
 	string strFileVoc, strVocChecksum;
 	bool isRead = false;
 
-	string pathLoadFileName = mStrLoadAtlasFromFile;
+	string pathLoadFileName = atlasLoadFilePath;
 
 	if(type == TEXT_FILE)    // File text
 	{
@@ -1531,7 +1529,7 @@ bool System::LoadAtlas(int type) {
 
 	if(isRead) {
 		// Check if the vocabulary is the same
-		string strInputVocabularyChecksum = CalculateCheckSum(mStrVocabularyFilePath, TEXT_FILE);
+		string strInputVocabularyChecksum = CalculateCheckSum(orbVocabularyFilePath, TEXT_FILE);
 
 		if(strInputVocabularyChecksum.compare(strVocChecksum) != 0) {
 			cout << "The vocabulary load isn't the same which the load session was created " << endl;
@@ -1585,7 +1583,7 @@ string System::CalculateCheckSum(string filename, int type) {
 }
 
 bool System::isLoadingMap() {
-	return !mStrLoadAtlasFromFile.empty();
+	return !atlasLoadFilePath.empty();
 }
 
 }    // namespace ORB_SLAM3
