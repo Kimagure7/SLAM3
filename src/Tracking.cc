@@ -2321,7 +2321,7 @@ bool Tracking::TrackLocalMap() {
     // More restrictive if there was a relocalization recently
     mpLocalMapper->mnMatchesInliers = mnMatchesInliers;
     if(mCurrentFrame.mnId < mnLastRelocFrameId + mMaxFrames && mnMatchesInliers < 30) {
-        cout << "TrackLocalMap() mCurrentFrame.mnId<mnLastRelocFrameId+mMaxFrames && mnMatchesInliers<30" << " = " << mnMatchesInliers << endl;
+        cout << "TrackLocalMap() mCurrentFrame.mnId<mnLastRelocFrameId+mMaxFrames ("<<mCurrentFrame.mnId<<" < "<<mnLastRelocFrameId<<" + "<<mMaxFrames<<" ) && mnMatchesInliers<50" << " = " << mnMatchesInliers << endl;
         return false;
     }
 
