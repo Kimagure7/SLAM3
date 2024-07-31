@@ -83,6 +83,7 @@ src/GeometricTools.cc
 src/TwoViewReconstruction.cc
 src/Config.cc
 src/Settings.cc
+src/RealTimeTrajectory.cc
 include/System.h
 include/Tracking.h
 include/LocalMapping.h
@@ -113,7 +114,8 @@ include/GeometricTools.h
 include/TwoViewReconstruction.h
 include/SerializationUtils.h
 include/Config.h
-include/Settings.h)
+include/Settings.h
+include/RealTimeTrajectory.h)
 
 add_subdirectory(Thirdparty/g2o)
 
@@ -187,8 +189,8 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/Examples/Monocular-Iner
 # endif()
 
 add_executable(rsd435i_offline
-Examples/Monocular-Inertial/rsd435i_equi.cc)
-target_link_libraries(rsd435i_equi ${PROJECT_NAME})
+Examples/Monocular-Inertial/rsd435i_offline.cc)
+target_link_libraries(rsd435i_offline ${PROJECT_NAME})
 
 # add_executable(gopro_slam
 # Examples/Monocular-Inertial/gopro_slam.cc)

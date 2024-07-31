@@ -464,4 +464,12 @@ void MapDrawer::GetCurrentOpenGLCameraMatrix(pangolin::OpenGlMatrix &M, pangolin
     MOw.m[13] = Twc(1,3);
     MOw.m[14] = Twc(2,3);
 }
+void MapDrawer::GetCurrentEigenCameraMatrix(Eigen::Matrix4f &M){
+    Eigen::Matrix4f Twc;
+    {
+        unique_lock<mutex> lock(mMutexCamera);
+        Twc = mCameraPose.matrix();
+    }
+    M = Twc;
+}
 } //namespace ORB_SLAM

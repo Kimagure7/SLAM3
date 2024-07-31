@@ -43,7 +43,8 @@ System::System(const string &strVocFile, const string &strSettingsFile, const eS
                const string &save_atlas_path,
                const cv::Ptr< cv::aruco::Dictionary > aruco_dict,
                const int init_tag_id,
-               const float init_tag_size)
+               const float init_tag_size,
+			   const bool bRtTraj)
     :    // remove initFr, 使用外部传参 路径
       mSensor(sensor), mpViewer(static_cast< Viewer * >(NULL)), mbReset(false), mbResetActiveMap(false),
       mbActivateLocalizationMode(false), mbDeactivateLocalizationMode(false), mbShutDown(false) {
@@ -197,6 +198,10 @@ System::System(const string &strVocFile, const string &strSettingsFile, const eS
 		mpTracker->SetViewer(mpViewer);
 		mpLoopCloser->mpViewer = mpViewer;
 		mpViewer->both	       = mpFrameDrawer->both;
+	}
+	if(bRtTraj){
+		mpRealTimeTrajectory = new RealTimeTrajectory(mpMapDrawer, strSettingsFile, settings_);
+		mptRealTimeTrajectory = new thread(&RealTimeTrajectory::Run, mpRealTimeTrajectory);
 	}
 
 	// Fix verbosity
@@ -520,6 +525,7 @@ void System::Shutdown() {
 	cout << "Shutdown" << endl;
 	mpLocalMapper->RequestFinish();
 	mpLoopCloser->RequestFinish();
+	mpRealTimeTrajectory->RequestFinish();
 	/*if(mpViewer)
 	{
 	    mpViewer->RequestFinish();
@@ -581,6 +587,7 @@ void System::SaveTrajectoryCSV(const string &filename) {
 
 	// Transform all keyframes so that the first keyframe is at the origin.
 	// After a loop closure the first keyframe might not be at the origin.
+	// 最后得到的应该是以第一帧为原点的相对位姿
 	Sophus::SE3f Two = vpKFs[0]->GetPoseInverse();
 
 	// open file
@@ -639,10 +646,10 @@ void System::SaveTrajectoryCSV(const string &filename) {
 
 		bool is_keyframe = (pKF->mTimeStamp == *iter_timestamp);
 
-		Trw = Trw * pKF->GetPose() * Two;
+		Trw = Trw * pKF->GetPose() * Two; // 相对于第一帧的位姿
 
-		Sophus::SE3f Tcw = (*iter_relative_pose) * Trw;
-		Sophus::SE3f Twc = Tcw.inverse();
+		Sophus::SE3f Tcw = (*iter_relative_pose) * Trw; 
+		Sophus::SE3f Twc = Tcw.inverse(); 
 
 		Eigen::Vector3f twc  = Twc.translation();
 		Eigen::Quaternionf q = Twc.unit_quaternion();
