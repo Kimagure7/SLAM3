@@ -1154,14 +1154,16 @@ void Tracking::Track() {
     if(mpLocalMapper->mbBadImu) {
         cout << "TRACK: Reset map because local mapper set the bad imu flag " << endl;
         mpSystem->ResetActiveMap();
-
-        // logging before return
-        mlRelativeFramePoses.push_back(mlRelativeFramePoses.back());
-        mlpReferences.push_back(mlpReferences.back());
-        mlFrameTimes.push_back(mlFrameTimes.back());
-        mlbLost.push_back(true);
-        mlState.push_back(mState);
-        return;
+        {
+            unique_lock< mutex > lock(mlMutexSave);
+            // logging before return
+            mlRelativeFramePoses.push_back(mlRelativeFramePoses.back());
+            mlpReferences.push_back(mlpReferences.back());
+            mlFrameTimes.push_back(mlFrameTimes.back());
+            mlbLost.push_back(true);
+            mlState.push_back(mState);
+            return;
+        }
     }
 
     Map *pCurrentMap = mpAtlas->GetCurrentMap();
@@ -1177,13 +1179,17 @@ void Tracking::Track() {
             unique_lock< mutex > lock(mMutexImuQueue);
             mlQueueImuData.clear();
             CreateMapInAtlas();
-            // logging before return
-            mlRelativeFramePoses.push_back(mlRelativeFramePoses.back());
-            mlpReferences.push_back(mlpReferences.back());
-            mlFrameTimes.push_back(mlFrameTimes.back());
-            mlbLost.push_back(true);
-            mlState.push_back(mState);
-            return;
+            {
+                unique_lock< mutex > lock(mlMutexSave);
+                // logging before return
+                mlRelativeFramePoses.push_back(mlRelativeFramePoses.back());
+                mlpReferences.push_back(mlpReferences.back());
+                mlFrameTimes.push_back(mlFrameTimes.back());
+                mlbLost.push_back(true);
+                mlState.push_back(mState);
+                return;
+            }
+
         } else if(mCurrentFrame.mTimeStamp > mLastFrame.mTimeStamp + 1.0) {
             // cout << mCurrentFrame.mTimeStamp << ", " << mLastFrame.mTimeStamp << endl;
             // cout << "id last: " << mLastFrame.mnId << "    id curr: " << mCurrentFrame.mnId << endl;
@@ -1202,12 +1208,15 @@ void Tracking::Track() {
                 }
 
                 // logging before return
-                mlRelativeFramePoses.push_back(mlRelativeFramePoses.back());
-                mlpReferences.push_back(mlpReferences.back());
-                mlFrameTimes.push_back(mlFrameTimes.back());
-                mlbLost.push_back(true);
-                mlState.push_back(mState);
-                return;
+                {
+                    unique_lock< mutex > lock(mlMutexSave);
+                    mlRelativeFramePoses.push_back(mlRelativeFramePoses.back());
+                    mlpReferences.push_back(mlpReferences.back());
+                    mlFrameTimes.push_back(mlFrameTimes.back());
+                    mlbLost.push_back(true);
+                    mlState.push_back(mState);
+                    return;
+                }
             }
         }
     }
@@ -1271,12 +1280,15 @@ void Tracking::Track() {
         {
             mLastFrame = Frame(mCurrentFrame);
             // cout<<"Initialization failed! tracking:1533.Still record the frames. mState "<< mState <<endl;
-            mlRelativeFramePoses.push_back(mlRelativeFramePoses.back());
-            mlpReferences.push_back(mlpReferences.back());
-            mlFrameTimes.push_back(mlFrameTimes.back());
-            mlbLost.push_back(true);
-            mlState.push_back(mState);
-            return;
+            {
+                unique_lock< mutex > lock(mlMutexSave);
+                mlRelativeFramePoses.push_back(mlRelativeFramePoses.back());
+                mlpReferences.push_back(mlpReferences.back());
+                mlFrameTimes.push_back(mlFrameTimes.back());
+                mlbLost.push_back(true);
+                mlState.push_back(mState);
+                return;
+            }
         }
 
         if(mpAtlas->GetAllMaps().size() == 1) {
@@ -1359,14 +1371,17 @@ void Tracking::Track() {
                         mpLastKeyFrame = static_cast< KeyFrame * >(NULL);
 
                     Verbose::PrintMess("done", Verbose::VERBOSITY_NORMAL);
-
+                    {
+                        unique_lock< mutex > lock(mlMutexSave);
+                        mlRelativeFramePoses.push_back(mlRelativeFramePoses.back());
+                        mlpReferences.push_back(mlpReferences.back());
+                        mlFrameTimes.push_back(mlFrameTimes.back());
+                        mlbLost.push_back(true);
+                        mlState.push_back(mState);
+                        return;
+                    }
                     // logging before return
-                    mlRelativeFramePoses.push_back(mlRelativeFramePoses.back());
-                    mlpReferences.push_back(mlpReferences.back());
-                    mlFrameTimes.push_back(mlFrameTimes.back());
-                    mlbLost.push_back(true);
-                    mlState.push_back(mState);
-                    return;
+
                 } else if(mState == INIT_RELOCALIZE) {
                     bOK = Relocalization();
                     if(bOK) {
@@ -1616,19 +1631,8 @@ void Tracking::Track() {
                 mpSystem->ResetActiveMap();
 
                 // logging before return
-                mlRelativeFramePoses.push_back(mlRelativeFramePoses.back());
-                mlpReferences.push_back(mlpReferences.back());
-                mlFrameTimes.push_back(mlFrameTimes.back());
-                mlbLost.push_back(true);
-                mlState.push_back(mState);
-                return;
-            }
-            if(mSensor == System::IMU_MONOCULAR || mSensor == System::IMU_STEREO || mSensor == System::IMU_RGBD)
-                if(!pCurrentMap->isImuInitialized()) {
-                    Verbose::PrintMess("Track lost before IMU initialisation, reseting...", Verbose::VERBOSITY_QUIET);
-                    mpSystem->ResetActiveMap();
-
-                    // logging before return
+                {
+                    unique_lock< mutex > lock(mlMutexSave);
                     mlRelativeFramePoses.push_back(mlRelativeFramePoses.back());
                     mlpReferences.push_back(mlpReferences.back());
                     mlFrameTimes.push_back(mlFrameTimes.back());
@@ -1636,16 +1640,34 @@ void Tracking::Track() {
                     mlState.push_back(mState);
                     return;
                 }
+            }
+            if(mSensor == System::IMU_MONOCULAR || mSensor == System::IMU_STEREO || mSensor == System::IMU_RGBD)
+                if(!pCurrentMap->isImuInitialized()) {
+                    Verbose::PrintMess("Track lost before IMU initialisation, reseting...", Verbose::VERBOSITY_QUIET);
+                    mpSystem->ResetActiveMap();
+                    {
+                        unique_lock< mutex > lock(mlMutexSave);
+                        // logging before return
+                        mlRelativeFramePoses.push_back(mlRelativeFramePoses.back());
+                        mlpReferences.push_back(mlpReferences.back());
+                        mlFrameTimes.push_back(mlFrameTimes.back());
+                        mlbLost.push_back(true);
+                        mlState.push_back(mState);
+                        return;
+                    }
+                }
 
             CreateMapInAtlas();
-
-            // logging before return
-            mlRelativeFramePoses.push_back(mlRelativeFramePoses.back());
-            mlpReferences.push_back(mlpReferences.back());
-            mlFrameTimes.push_back(mlFrameTimes.back());
-            mlbLost.push_back(true);
-            mlState.push_back(mState);
-            return;
+            {
+                unique_lock< mutex > lock(mlMutexSave);
+                // logging before return
+                mlRelativeFramePoses.push_back(mlRelativeFramePoses.back());
+                mlpReferences.push_back(mlpReferences.back());
+                mlFrameTimes.push_back(mlFrameTimes.back());
+                mlbLost.push_back(true);
+                mlState.push_back(mState);
+                return;
+            }
         }
 
         if(!mCurrentFrame.mpReferenceKF)
@@ -1659,18 +1681,25 @@ void Tracking::Track() {
     bool is_lost = !(mState == OK || mState == RECENTLY_LOST);
     if(!is_lost && mCurrentFrame.isSet()) {
         Sophus::SE3f Tcr_ = mCurrentFrame.GetPose() * mCurrentFrame.mpReferenceKF->GetPoseInverse();
-        mlRelativeFramePoses.push_back(Tcr_);
-        mlpReferences.push_back(mCurrentFrame.mpReferenceKF);
-        mlFrameTimes.push_back(mCurrentFrame.mTimeStamp);
-        mlbLost.push_back(is_lost);
-        mlState.push_back(mState);
+        {
+            unique_lock< mutex > lock(mlMutexSave);
+            mlRelativeFramePoses.push_back(Tcr_);
+            mlpReferences.push_back(mCurrentFrame.mpReferenceKF);
+            mlFrameTimes.push_back(mCurrentFrame.mTimeStamp);
+            mlbLost.push_back(is_lost);
+            mlState.push_back(mState);
+        }
+
     } else {
         // This can happen if tracking is lost
-        mlRelativeFramePoses.push_back(mlRelativeFramePoses.back());
-        mlpReferences.push_back(mlpReferences.back());
-        mlFrameTimes.push_back(mlFrameTimes.back());
-        mlbLost.push_back(is_lost);
-        mlState.push_back(mState);
+        {
+            unique_lock< mutex > lock(mlMutexSave);
+            mlRelativeFramePoses.push_back(mlRelativeFramePoses.back());
+            mlpReferences.push_back(mlpReferences.back());
+            mlFrameTimes.push_back(mlFrameTimes.back());
+            mlbLost.push_back(is_lost);
+            mlState.push_back(mState);
+        }
     }
 }
 
@@ -2321,7 +2350,7 @@ bool Tracking::TrackLocalMap() {
     // More restrictive if there was a relocalization recently
     mpLocalMapper->mnMatchesInliers = mnMatchesInliers;
     if(mCurrentFrame.mnId < mnLastRelocFrameId + mMaxFrames && mnMatchesInliers < 30) {
-        cout << "TrackLocalMap() mCurrentFrame.mnId<mnLastRelocFrameId+mMaxFrames ("<<mCurrentFrame.mnId<<" < "<<mnLastRelocFrameId<<" + "<<mMaxFrames<<" ) && mnMatchesInliers<50" << " = " << mnMatchesInliers << endl;
+        cout << "TrackLocalMap() mCurrentFrame.mnId<mnLastRelocFrameId+mMaxFrames (" << mCurrentFrame.mnId << " < " << mnLastRelocFrameId << " + " << mMaxFrames << " ) && mnMatchesInliers<50" << " = " << mnMatchesInliers << endl;
         return false;
     }
 
