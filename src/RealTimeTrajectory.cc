@@ -2,8 +2,8 @@
 
 #include "RealTimeTrajectory.h"
 
-RealTimeTrajectory::RealTimeTrajectory(const float fps, const string targetPort, const string fileSavePath)
-    : mT(1e3 / fps), tPort(targetPort), mFileSavePath(fileSavePath), mbFinishRequested(false) {
+RealTimeTrajectory::RealTimeTrajectory(const float fps, const int targetPort, const string targetIP, const string fileSavePath)
+    : mT(1e3 / fps), tPort(targetPort), mFileSavePath(fileSavePath), mbFinishRequested(false), tIP(targetIP) {
 }
 
 void RealTimeTrajectory::Run() {
@@ -14,12 +14,14 @@ void RealTimeTrajectory::Run() {
             continue;
         }
         auto result = GetTcw();
-        // send to socket
+        SendTcw(result);
         // tobedone
-        if(CheckFinish())
+        if(CheckFinish()) {
             break;
+        }
     }
     cout << "RealTimeTrajectory::Run() finished" << endl;
+    close(sock);
     SaveTrajectory();
 }
 
@@ -49,7 +51,28 @@ bool RealTimeTrajectory::SaveTrajectory() {
     cout << "Trajectory saved to " << saveFilePath << endl;
     return true;
 }
+void RealTimeTrajectory::SendTcw(std::pair< Sophus::SE3f, bool > data) {
+    send(sock, &data, sizeof(data), 0);
+}
 
+bool RealTimeTrajectory::CreateSocket(const int targetPort, const string targetIP) {
+    int s = socket(AF_INET, SOCK_STREAM, 0);
+    if(s == -1) {
+        cout << "socket create failed" << endl;
+        return false;
+    }
+    struct sockaddr_in addr;
+    addr.sin_family      = AF_INET;
+    addr.sin_port        = htons(targetPort);
+    addr.sin_addr.s_addr = inet_addr(targetIP.c_str());
+    if(connect(s, (struct sockaddr *)&addr, sizeof(addr)) == -1) {
+        cout << "connect failed" << endl;
+        return false;
+    }
+    sock = s;
+    cout << "socket connect to" << targetIP << ":" << targetPort << endl;
+    return true;
+}
 
 void RealTimeTrajectory::AddTcw(std::pair< Sophus::SE3f, bool > result) {
     unique_lock< mutex > lock(mMutexQueue);
