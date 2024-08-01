@@ -2,24 +2,20 @@
 
 #include "RealTimeTrajectory.h"
 
-namespace ORB_SLAM3 {
-RealTimeTrajectory::RealTimeTrajectory(MapDrawer *pMapDrawer, const string &strSettingPath, Settings *settings) {
-    mpMapDrawer = pMapDrawer;
-    if(settings) {
-        newParameterLoader(settings);
-    }
+RealTimeTrajectory::RealTimeTrajectory(const float fps, const string targetPort, const string fileSavePath)
+    : mT(1e3 / fps), tPort(targetPort), mFileSavePath(fileSavePath), mbFinishRequested(false) {
 }
 
 void RealTimeTrajectory::Run() {
-    Eigen::Matrix4f Twc;
-    mbFinishRequested = false;
     cout << "RealTimeTrajectory::Run()" << endl;
     while(1) {
-        usleep(mT * 1e3);
-        mpMapDrawer->GetCurrentEigenCameraMatrix(Twc);
-        historyTwc.push_back(Twc);
-        // Eigen::Quaternionf q(Twc.block<3, 3>(0, 0));
-        // Eigen::Vector3f t = Twc.block<3, 1>(0, 3);
+        if(!CheckTcw()) {
+            usleep(mT / 2);
+            continue;
+        }
+        auto result = GetTcw();
+        // send to socket
+        // tobedone
         if(CheckFinish())
             break;
     }
@@ -27,28 +23,50 @@ void RealTimeTrajectory::Run() {
     SaveTrajectory();
 }
 
-bool RealTimeTrajectory::SaveTrajectory(const string &filename) {
+bool RealTimeTrajectory::SaveTrajectory() {
     string saveFilePath;
-    filename.empty() ? saveFilePath = "trajectory.csv" : saveFilePath = filename;
+    mFileSavePath.empty() ? saveFilePath = "trajectory.csv" : saveFilePath = mFileSavePath;
     ofstream f;
     f.open(saveFilePath.c_str());
     f << fixed;
     // add header
-	f << "x,y,z,q_x,q_y,q_z,q_w" << endl;
-    for(size_t i = 0; i < historyTwc.size(); i++) {
-        Eigen::Quaternionf q(historyTwc[i].block<3, 3>(0, 0));
-        Eigen::Vector3f t = historyTwc[i].block<3, 1>(0, 3);
-        f << t(0) << "," << t(1) << "," << t(2) << "," << q.x() << "," << q.y() << "," << q.z() << "," << q.w() << endl;
+    f << "is_lost,x,y,z,q_x,q_y,q_z,q_w" << endl;
+    for(size_t i = 0; i < mHistoryTcw.size(); i++) {
+        auto result = mHistoryTcw[i];
+        if(result.second) {
+            Sophus::SE3f Tcw     = result.first;
+            Sophus::SE3f Twc     = Tcw.inverse();
+            Eigen::Vector3f twc  = Twc.translation();
+            Eigen::Quaternionf q = Twc.unit_quaternion();
+            f << "0,";
+            f << setprecision(9) << twc(0) << ',' << twc(1) << ',' << twc(2) << ',';
+            f << setprecision(9) << q.x() << ',' << q.y() << ',' << q.z() << ',' << q.w() << endl;
+        } else {
+            f << "1,0,0,0,0,0,0,1" << endl;
+        }
     }
     f.close();
     cout << "Trajectory saved to " << saveFilePath << endl;
     return true;
 }
-void RealTimeTrajectory::newParameterLoader(Settings *settings) {
-    float fps = settings->fps();
-    if(fps < 1)
-        fps = 30;
-    mT = 1e3 / fps;
+
+
+void RealTimeTrajectory::AddTcw(std::pair< Sophus::SE3f, bool > result) {
+    unique_lock< mutex > lock(mMutexQueue);
+    mQueueTcw.push(result);
+    mHistoryTcw.push_back(result);
+}
+
+bool RealTimeTrajectory::CheckTcw() {
+    unique_lock< mutex > lock(mMutexQueue);
+    return !mQueueTcw.empty();
+}
+
+std::pair< Sophus::SE3f, bool > RealTimeTrajectory::GetTcw() {
+    unique_lock< mutex > lock(mMutexQueue);
+    std::pair< Sophus::SE3f, bool > result = mQueueTcw.front();
+    mQueueTcw.pop();
+    return result;
 }
 
 void RealTimeTrajectory::RequestFinish() {
@@ -60,4 +78,3 @@ bool RealTimeTrajectory::CheckFinish() {
     unique_lock< mutex > lock(mMutexFinish);
     return mbFinishRequested;
 }
-}    // namespace ORB_SLAM3

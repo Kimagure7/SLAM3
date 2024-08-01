@@ -15,34 +15,11 @@
 #include "librealsense2/rsutil.h"
 #include <CLI11.hpp>
 #include <System.h>
+#include <RealTimeTrajectory.h>
 #include <json.h>
 #include <librealsense2/rs.hpp>
-
 using namespace std;
 using nlohmann::json;
-
-bool SaveTrajectory(const string &filename,const std::vector<Sophus::SE3<float>> mTcw_vector) {
-    string saveFilePath;
-    filename.empty() ? saveFilePath = "trajectory.csv" : saveFilePath = filename;
-    ofstream f;
-    f.open(saveFilePath.c_str());
-    f << fixed;
-    // add header
-	f << "x,y,z,q_x,q_y,q_z,q_w" << endl;
-    for(size_t i = 0; i < mTcw_vector.size(); i++) {
-        Sophus::SE3f Tcw = mTcw_vector[i];
-        Sophus::SE3f Twc = Tcw.inverse(); 
-
-        Eigen::Vector3f twc  = Twc.translation();
-		Eigen::Quaternionf q = Twc.unit_quaternion();
-        f << setprecision(9) << twc(0) << ',' << twc(1) << ',' << twc(2) << ',';
-		f << setprecision(9) << q.x() << ',' << q.y() << ',' << q.z() << ',' << q.w() << endl;
-    }
-    f.close();
-    cout << "Trajectory saved to " << saveFilePath << endl;
-    return true;
-}
-
 void signal_callback_handler(int signum) {
     cout << "gopro_slam.cc Caught signal " << signum << endl;
     // Terminate program
@@ -264,7 +241,8 @@ int main(int argc, char **argv) {
         true, load_map, save_map,
         aruco_dict, init_tag_id, init_tag_size);
     float imageScale = SLAM.GetImageScale();
-
+    
+    RealTimeTrajectory* mpRealTimeTrajectory = new RealTimeTrajectory(30, "12345", "trajectory.csv");
     double timestamp;
     cv::Mat im;
 
@@ -276,8 +254,6 @@ int main(int argc, char **argv) {
 
     double t_resize = 0.f;
     double t_track  = 0.f;
-    std::vector<Sophus::SE3<float>> mTcw_vector;
-    Sophus::SE3<float> Tcw;
     while(!SLAM.isShutDown()) {
         std::vector< rs2_vector > vGyro;
         std::vector< double > vGyro_times;
@@ -337,24 +313,24 @@ int main(int argc, char **argv) {
         }
 
         // Pass the image to the SLAM system
-        Tcw = SLAM.TrackMonocular(im, timestamp, vImuMeas);
-        mTcw_vector.push_back(Tcw);
+        auto result = SLAM.LocalizeMonocular(im, timestamp, vImuMeas);
+        mpRealTimeTrajectory->AddTcw(result);
         // Clear the previous IMU measurements to load the new ones
         vImuMeas.clear();
     }
     cout << "System shutdown!\n";
+    mpRealTimeTrajectory->RequestFinish();
     if(load_map.empty() && !save_map.empty()) {
         SLAM.SaveAtlas(ORB_SLAM3::System::FileType::BINARY_FILE, save_map, vocabulary);
     }
     // Save camera trajectory
-    if(!output_trajectory_tum.empty()) {
-        SLAM.SaveTrajectoryTUM(output_trajectory_tum);
-    }
+    // if(!output_trajectory_tum.empty()) {
+    //     SLAM.SaveTrajectoryTUM(output_trajectory_tum);
+    // }
 
-    if(!output_trajectory_csv.empty()) {
-        SLAM.SaveTrajectoryCSV(output_trajectory_csv);
-    }
-    SaveTrajectory("trajectory.csv",mTcw_vector);
+    // if(!output_trajectory_csv.empty()) {
+    //     SLAM.SaveTrajectoryCSV(output_trajectory_csv);
+    // }
     return 0;
 }
 
