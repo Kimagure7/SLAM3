@@ -1,5 +1,6 @@
 #ifndef REALTIMETRAJECTORY_H
 #define REALTIMETRAJECTORY_H
+
 #include <System.h>
 #include <arpa/inet.h>
 #include <json.h>
@@ -8,6 +9,8 @@
 #include <queue>
 #include <sys/socket.h>
 #include <vector>
+#include <sys/time.h>
+#include <sys/select.h>
 
 using namespace std;
 class RealTimeTrajectory {
@@ -25,7 +28,10 @@ private:
     const int tPort;    // socket target port
     const string tIP;
     const string mFileSavePath;
+    bool mbAckReceived;
+    int frameCount;
     int sock;
+    int max_connect_time = 5;
     // Tracking *mpTracker;
     std::mutex mMutexFinish, mMutexQueue;
     std::vector< std::pair< Sophus::SE3f, bool > > mHistoryTcw;
@@ -36,7 +42,9 @@ private:
     bool SaveTrajectory();    // debug use
     std::pair< Sophus::SE3f, bool > GetTcw();
     bool CheckTcw();
+    bool RecvAck(int frameID);
     void SendTcw(std::pair< Sophus::SE3f, bool > data);
     bool CreateSocket(const int targetPort, const string targetIP);
+    void ReconnectSocket();
 };
 #endif    // REALTIMETRAJECTORY_H

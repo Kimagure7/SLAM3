@@ -3,8 +3,8 @@
 #include "RealTimeTrajectory.h"
 using nlohmann::json;
 RealTimeTrajectory::RealTimeTrajectory(const float fps, const int targetPort, const string targetIP, const string fileSavePath)
-    : mT(1e3 / fps), tPort(targetPort), mFileSavePath(fileSavePath), mbFinishRequested(false), tIP(targetIP) {
-        CreateSocket(targetPort, targetIP);
+    : mT(1e3 / fps), tPort(targetPort), mFileSavePath(fileSavePath), mbFinishRequested(false), tIP(targetIP), mbAckReceived(false), frameCount(0), max_connect_time(4) {
+    CreateSocket(targetPort, targetIP);
 }
 
 void RealTimeTrajectory::Run() {
@@ -16,7 +16,6 @@ void RealTimeTrajectory::Run() {
         }
         auto result = GetTcw();
         SendTcw(result);
-        // tobedone
         if(CheckFinish()) {
             break;
         }
@@ -67,22 +66,72 @@ void RealTimeTrajectory::SendTcw(std::pair< Sophus::SE3f, bool > data) {
         j["q_y"]             = q.y();
         j["q_z"]             = q.z();
         j["q_w"]             = q.w();
+        j["frame_count"]     = frameCount++;
     } else {
-        j["is_lost"] = 1;
-        j["x"]       = 0;
-        j["y"]       = 0;
-        j["z"]       = 0;
-        j["q_x"]     = 0;
-        j["q_y"]     = 0;
-        j["q_z"]     = 0;
-        j["q_w"]     = 1;
+        j["is_lost"]     = 1;
+        j["x"]           = 0;
+        j["y"]           = 0;
+        j["z"]           = 0;
+        j["q_x"]         = 0;
+        j["q_y"]         = 0;
+        j["q_z"]         = 0;
+        j["q_w"]         = 1;
+        j["frame_count"] = frameCount++;
     }
     string s = j.dump();
     send(sock, s.c_str(), s.size(), 0);
+    if(!RecvAck(frameCount)) {
+        ReconnectSocket();
+    }
+}
+
+bool RealTimeTrajectory::RecvAck(int frameID) {
+    char buffer[1024];
+    fd_set readfds;
+    struct timeval timeout;
+
+    // Clear the file descriptor set
+    FD_ZERO(&readfds);
+    // Add socket to the file descriptor set
+    FD_SET(sock, &readfds);
+
+    // Set the timeout value (1 second)
+    timeout.tv_sec  = 1;
+    timeout.tv_usec = 0;
+
+    int ret = select(sock + 1, &readfds, NULL, NULL, &timeout);
+
+    if(ret == -1) {
+        cout << "select failed" << endl;
+        return false;
+    } else if(ret == 0) {
+        cout << "recv timed out" << endl;
+        return false;
+    }
+
+    int recvSize = recv(sock, buffer, 1024, 0);
+    if(recvSize == -1) {
+        cout << "recv failed" << endl;
+        return false;
+    }
+    string recvStr(buffer, recvSize);
+    if(recvStr == to_string(frameID)) {
+        return true;
+    } else {
+        cout << "Ack frame count not match" << endl;
+        return false;
+    }
+}
+
+void RealTimeTrajectory::ReconnectSocket() {
+    cout << "ReconnectSocket" << endl;
+    close(sock);
+    CreateSocket(tPort, tIP);
 }
 
 bool RealTimeTrajectory::CreateSocket(const int targetPort, const string targetIP) {
-    int s = socket(AF_INET, SOCK_STREAM, 0);
+    int s             = socket(AF_INET, SOCK_STREAM, 0);
+    int retryingTimes = 0;
     if(s == -1) {
         cout << "socket create failed" << endl;
         return false;
@@ -91,9 +140,13 @@ bool RealTimeTrajectory::CreateSocket(const int targetPort, const string targetI
     addr.sin_family      = AF_INET;
     addr.sin_port        = htons(targetPort);
     addr.sin_addr.s_addr = inet_addr(targetIP.c_str());
-    if(connect(s, (struct sockaddr *)&addr, sizeof(addr)) == -1) {
-        cout << "connect failed" << endl;
-        return false;
+
+    while(connect(s, (struct sockaddr *)&addr, sizeof(addr)) == -1) {
+        cout << "connect failed, retrying times:" << ++retryingTimes << endl;
+        usleep(200);
+        if(retryingTimes > max_connect_time) {
+            return false;
+        }
     }
     sock = s;
     cout << "socket connect to" << targetIP << ":" << targetPort << endl;
