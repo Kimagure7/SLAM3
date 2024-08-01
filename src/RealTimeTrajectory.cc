@@ -4,6 +4,7 @@
 using nlohmann::json;
 RealTimeTrajectory::RealTimeTrajectory(const float fps, const int targetPort, const string targetIP, const string fileSavePath)
     : mT(1e3 / fps), tPort(targetPort), mFileSavePath(fileSavePath), mbFinishRequested(false), tIP(targetIP) {
+        CreateSocket(targetPort, targetIP);
 }
 
 void RealTimeTrajectory::Run() {

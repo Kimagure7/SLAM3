@@ -240,7 +240,7 @@ int main(int argc, char **argv) {
         aruco_dict, init_tag_id, init_tag_size);
     float imageScale = SLAM.GetImageScale();
 
-    RealTimeTrajectory *mpRealTimeTrajectory = new RealTimeTrajectory(30, 10066, "127.0.0.1", "trajectory.csv");
+    RealTimeTrajectory *mpRealTimeTrajectory = new RealTimeTrajectory(30, 10066, "192.168.110.13", "trajectory.csv");
     std::thread *pRtTraj;
     pRtTraj = new std::thread(&RealTimeTrajectory::Run, mpRealTimeTrajectory);
     double timestamp;
