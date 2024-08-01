@@ -1,21 +1,21 @@
 #include <algorithm>
 #include <chrono>
+#include <condition_variable>
 #include <ctime>
 #include <fstream>
 #include <iostream>
 #include <signal.h>
 #include <sstream>
 #include <stdlib.h>
-
-#include <condition_variable>
+#include <thread>
 
 #include <opencv2/core/core.hpp>
 #include <opencv2/imgproc.hpp>
 
 #include "librealsense2/rsutil.h"
 #include <CLI11.hpp>
-#include <System.h>
 #include <RealTimeTrajectory.h>
+#include <System.h>
 #include <json.h>
 #include <librealsense2/rs.hpp>
 using namespace std;
@@ -207,10 +207,8 @@ int main(int argc, char **argv) {
     };
 
     rs2::pipeline_profile pipe_profile = pipe.start(cfg, imu_callback);
-
     vector< ORB_SLAM3::IMU::Point > vImuMeas;
     rs2::stream_profile cam_stream = pipe_profile.get_stream(RS2_STREAM_COLOR);
-
     rs2::stream_profile imu_stream = pipe_profile.get_stream(RS2_STREAM_GYRO);
     float *Rbc                     = cam_stream.get_extrinsics_to(imu_stream).rotation;
     float *tbc                     = cam_stream.get_extrinsics_to(imu_stream).translation;
@@ -241,8 +239,10 @@ int main(int argc, char **argv) {
         true, load_map, save_map,
         aruco_dict, init_tag_id, init_tag_size);
     float imageScale = SLAM.GetImageScale();
-    
-    RealTimeTrajectory* mpRealTimeTrajectory = new RealTimeTrajectory(30, "12345", "trajectory.csv");
+
+    RealTimeTrajectory *mpRealTimeTrajectory = new RealTimeTrajectory(30, 10066, "127.0.0.1", "trajectory.csv");
+    std::thread *pRtTraj;
+    pRtTraj = new std::thread(&RealTimeTrajectory::Run, mpRealTimeTrajectory);
     double timestamp;
     cv::Mat im;
 

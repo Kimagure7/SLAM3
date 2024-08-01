@@ -1,7 +1,7 @@
 // 包含内容：实时获取轨迹， socket发送， 保存到文件（测试阶段）
 
 #include "RealTimeTrajectory.h"
-
+using nlohmann::json;
 RealTimeTrajectory::RealTimeTrajectory(const float fps, const int targetPort, const string targetIP, const string fileSavePath)
     : mT(1e3 / fps), tPort(targetPort), mFileSavePath(fileSavePath), mbFinishRequested(false), tIP(targetIP) {
 }
@@ -52,7 +52,32 @@ bool RealTimeTrajectory::SaveTrajectory() {
     return true;
 }
 void RealTimeTrajectory::SendTcw(std::pair< Sophus::SE3f, bool > data) {
-    send(sock, &data, sizeof(data), 0);
+    json j;
+    if(data.second) {
+        Sophus::SE3f Tcw     = data.first;
+        Sophus::SE3f Twc     = Tcw.inverse();
+        Eigen::Vector3f twc  = Twc.translation();
+        Eigen::Quaternionf q = Twc.unit_quaternion();
+        j["is_lost"]         = 0;
+        j["x"]               = twc(0);
+        j["y"]               = twc(1);
+        j["z"]               = twc(2);
+        j["q_x"]             = q.x();
+        j["q_y"]             = q.y();
+        j["q_z"]             = q.z();
+        j["q_w"]             = q.w();
+    } else {
+        j["is_lost"] = 1;
+        j["x"]       = 0;
+        j["y"]       = 0;
+        j["z"]       = 0;
+        j["q_x"]     = 0;
+        j["q_y"]     = 0;
+        j["q_z"]     = 0;
+        j["q_w"]     = 1;
+    }
+    string s = j.dump();
+    send(sock, s.c_str(), s.size(), 0);
 }
 
 bool RealTimeTrajectory::CreateSocket(const int targetPort, const string targetIP) {
