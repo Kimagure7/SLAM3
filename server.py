@@ -1,6 +1,6 @@
 import socket
 import json
-
+import time
 def server_program():
     # 获取主机名
     host = socket.gethostname()
@@ -32,8 +32,8 @@ def server_program():
                     if 'frame_count' in parsed_data:  # 检查'frame_count'字段是否存在
                         frame_count = parsed_data['frame_count']
                         
-                        response = {'received_frame_count': frame_count}  # 构建响应数据
-                        
+                        response = {'received_frame_count': frame_count}  # 构建响应数据   
+                        time.sleep(0.1) 
                         client_socket.send(json.dumps(response).encode())  # 发送响应
                         
                         print("Sent frame count:", frame_count)

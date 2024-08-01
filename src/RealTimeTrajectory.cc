@@ -66,7 +66,7 @@ void RealTimeTrajectory::SendTcw(std::pair< Sophus::SE3f, bool > data) {
         j["q_y"]             = q.y();
         j["q_z"]             = q.z();
         j["q_w"]             = q.w();
-        j["frame_count"]     = frameCount++;
+        j["frame_count"]     = frameCount;
     } else {
         j["is_lost"]     = 1;
         j["x"]           = 0;
@@ -76,13 +76,14 @@ void RealTimeTrajectory::SendTcw(std::pair< Sophus::SE3f, bool > data) {
         j["q_y"]         = 0;
         j["q_z"]         = 0;
         j["q_w"]         = 1;
-        j["frame_count"] = frameCount++;
+        j["frame_count"] = frameCount;
     }
     string s = j.dump();
     send(sock, s.c_str(), s.size(), 0);
     if(!RecvAck(frameCount)) {
         ReconnectSocket();
     }
+    frameCount++;
 }
 
 bool RealTimeTrajectory::RecvAck(int frameID) {
