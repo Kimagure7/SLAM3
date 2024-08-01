@@ -3,15 +3,16 @@
 
 #include <System.h>
 #include <arpa/inet.h>
+#include <fcntl.h>
 #include <json.h>
 #include <mutex>
 #include <netinet/in.h>
 #include <queue>
-#include <sys/socket.h>
-#include <vector>
-#include <sys/time.h>
 #include <sys/select.h>
-
+#include <sys/socket.h>
+#include <sys/time.h>
+#include <unistd.h>
+#include <vector>
 using namespace std;
 class RealTimeTrajectory {
 public:

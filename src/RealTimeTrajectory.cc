@@ -115,10 +115,16 @@ bool RealTimeTrajectory::RecvAck(int frameID) {
         return false;
     }
     string recvStr(buffer, recvSize);
-    if(recvStr == to_string(frameID)) {
-        return true;
-    } else {
-        cout << "Ack frame count not match" << endl;
+    try {
+        json jdata = json::parse(recvStr);
+        if(jdata["received_frame_count"] == frameID) {
+            return true;
+        } else {
+            std::cout << "Ack frame count not match" << std::endl;
+            return false;
+        }
+    } catch(nlohmann::detail::parse_error &e) {
+        std::cout << "Failed to parse JSON: " << e.what() << "\n";
         return false;
     }
 }
