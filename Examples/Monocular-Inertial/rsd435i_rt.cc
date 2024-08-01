@@ -262,7 +262,7 @@ int main(int argc, char **argv) {
         vocabulary, setting,
         ORB_SLAM3::System::IMU_MONOCULAR,
         true, load_map, save_map,
-        aruco_dict, init_tag_id, init_tag_size,true);
+        aruco_dict, init_tag_id, init_tag_size);
     float imageScale = SLAM.GetImageScale();
 
     double timestamp;

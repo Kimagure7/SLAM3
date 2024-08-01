@@ -152,7 +152,7 @@ public:
     list<bool> mlbLost;
     list<eTrackingState> mlState;
 
-    std::mutex mlMutexSave; // Mutex for saving the trajectory in parallel threads
+    //std::mutex mlMutexSave; // Mutex for saving the trajectory in parallel threads
 
     // frames with estimated pose
     int mTrackedFr;

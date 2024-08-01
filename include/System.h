@@ -39,7 +39,7 @@
 #include "Viewer.h"
 #include "ImuTypes.h"
 #include "Settings.h"
-#include "RealTimeTrajectory.h"
+//#include "RealTimeTrajectory.h"
 
 namespace ORB_SLAM3
 {
@@ -79,7 +79,7 @@ class Tracking;
 class LocalMapping;
 class LoopClosing;
 class Settings;
-class RealTimeTrajectory;
+//class RealTimeTrajectory;
 class System
 {
 public:
@@ -108,8 +108,7 @@ public:
         const string &save_atlas_path = std::string(),
         const cv::Ptr<cv::aruco::Dictionary> aruco_dict=cv::aruco::getPredefinedDictionary(cv::aruco::DICT_4X4_50),
         const int init_tag_id=13,
-        const float init_tag_size=0.16,
-        const bool bRtTraj=false
+        const float init_tag_size=0.16
     );
 
     // Proccess the given stereo frame. Images must be synchronized and rectified.
@@ -238,7 +237,7 @@ private:
     Viewer* mpViewer;
 
     // RealTimeTrajectory gets the camera pose at real time and saves it in a file.
-    RealTimeTrajectory* mpRealTimeTrajectory;
+    //RealTimeTrajectory* mpRealTimeTrajectory;
 
     FrameDrawer* mpFrameDrawer;
     MapDrawer* mpMapDrawer;
@@ -248,7 +247,7 @@ private:
     std::thread* mptLocalMapping;
     std::thread* mptLoopClosing;
     std::thread* mptViewer;
-    std::thread* mptRealTimeTrajectory;
+    //std::thread* mptRealTimeTrajectory;
 
     // Reset flag
     std::mutex mMutexReset;

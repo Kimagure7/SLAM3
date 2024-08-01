@@ -43,8 +43,8 @@ System::System(const string &strVocFile, const string &strSettingsFile, const eS
                const string &save_atlas_path,
                const cv::Ptr< cv::aruco::Dictionary > aruco_dict,
                const int init_tag_id,
-               const float init_tag_size,
-			   const bool bRtTraj)
+               const float init_tag_size
+			   )
     :    // remove initFr, 使用外部传参 路径
       mSensor(sensor), mpViewer(static_cast< Viewer * >(NULL)), mbReset(false), mbResetActiveMap(false),
       mbActivateLocalizationMode(false), mbDeactivateLocalizationMode(false), mbShutDown(false) {
@@ -199,10 +199,10 @@ System::System(const string &strVocFile, const string &strSettingsFile, const eS
 		mpLoopCloser->mpViewer = mpViewer;
 		mpViewer->both	       = mpFrameDrawer->both;
 	}
-	if(bRtTraj){
-		mpRealTimeTrajectory = new RealTimeTrajectory(mpMapDrawer, strSettingsFile, settings_);
-		mptRealTimeTrajectory = new thread(&RealTimeTrajectory::Run, mpRealTimeTrajectory);
-	}
+	// if(bRtTraj){
+	// 	mpRealTimeTrajectory = new RealTimeTrajectory(mpMapDrawer, strSettingsFile, settings_);
+	// 	mptRealTimeTrajectory = new thread(&RealTimeTrajectory::Run, mpRealTimeTrajectory);
+	// }
 
 	// Fix verbosity
 	Verbose::SetTh(Verbose::VERBOSITY_QUIET);
@@ -525,7 +525,8 @@ void System::Shutdown() {
 	cout << "Shutdown" << endl;
 	mpLocalMapper->RequestFinish();
 	mpLoopCloser->RequestFinish();
-	mpRealTimeTrajectory->RequestFinish();
+	// if (mpRealTimeTrajectory)
+	// 	mpRealTimeTrajectory->RequestFinish();
 	/*if(mpViewer)
 	{
 	    mpViewer->RequestFinish();

@@ -1155,7 +1155,7 @@ void Tracking::Track() {
         cout << "TRACK: Reset map because local mapper set the bad imu flag " << endl;
         mpSystem->ResetActiveMap();
         {
-            unique_lock< mutex > lock(mlMutexSave);
+            //unique_lock< mutex > lock(mlMutexSave);
             // logging before return
             mlRelativeFramePoses.push_back(mlRelativeFramePoses.back());
             mlpReferences.push_back(mlpReferences.back());
@@ -1180,7 +1180,7 @@ void Tracking::Track() {
             mlQueueImuData.clear();
             CreateMapInAtlas();
             {
-                unique_lock< mutex > lock(mlMutexSave);
+                //unique_lock< mutex > lock(mlMutexSave);
                 // logging before return
                 mlRelativeFramePoses.push_back(mlRelativeFramePoses.back());
                 mlpReferences.push_back(mlpReferences.back());
@@ -1209,7 +1209,7 @@ void Tracking::Track() {
 
                 // logging before return
                 {
-                    unique_lock< mutex > lock(mlMutexSave);
+                    //unique_lock< mutex > lock(mlMutexSave);
                     mlRelativeFramePoses.push_back(mlRelativeFramePoses.back());
                     mlpReferences.push_back(mlpReferences.back());
                     mlFrameTimes.push_back(mlFrameTimes.back());
@@ -1281,7 +1281,7 @@ void Tracking::Track() {
             mLastFrame = Frame(mCurrentFrame);
             // cout<<"Initialization failed! tracking:1533.Still record the frames. mState "<< mState <<endl;
             {
-                unique_lock< mutex > lock(mlMutexSave);
+                //unique_lock< mutex > lock(mlMutexSave);
                 mlRelativeFramePoses.push_back(mlRelativeFramePoses.back());
                 mlpReferences.push_back(mlpReferences.back());
                 mlFrameTimes.push_back(mlFrameTimes.back());
@@ -1372,7 +1372,7 @@ void Tracking::Track() {
 
                     Verbose::PrintMess("done", Verbose::VERBOSITY_NORMAL);
                     {
-                        unique_lock< mutex > lock(mlMutexSave);
+                        //unique_lock< mutex > lock(mlMutexSave);
                         mlRelativeFramePoses.push_back(mlRelativeFramePoses.back());
                         mlpReferences.push_back(mlpReferences.back());
                         mlFrameTimes.push_back(mlFrameTimes.back());
@@ -1632,7 +1632,7 @@ void Tracking::Track() {
 
                 // logging before return
                 {
-                    unique_lock< mutex > lock(mlMutexSave);
+                    //unique_lock< mutex > lock(mlMutexSave);
                     mlRelativeFramePoses.push_back(mlRelativeFramePoses.back());
                     mlpReferences.push_back(mlpReferences.back());
                     mlFrameTimes.push_back(mlFrameTimes.back());
@@ -1646,7 +1646,7 @@ void Tracking::Track() {
                     Verbose::PrintMess("Track lost before IMU initialisation, reseting...", Verbose::VERBOSITY_QUIET);
                     mpSystem->ResetActiveMap();
                     {
-                        unique_lock< mutex > lock(mlMutexSave);
+                        //unique_lock< mutex > lock(mlMutexSave);
                         // logging before return
                         mlRelativeFramePoses.push_back(mlRelativeFramePoses.back());
                         mlpReferences.push_back(mlpReferences.back());
@@ -1659,7 +1659,7 @@ void Tracking::Track() {
 
             CreateMapInAtlas();
             {
-                unique_lock< mutex > lock(mlMutexSave);
+                //unique_lock< mutex > lock(mlMutexSave);
                 // logging before return
                 mlRelativeFramePoses.push_back(mlRelativeFramePoses.back());
                 mlpReferences.push_back(mlpReferences.back());
@@ -1682,7 +1682,7 @@ void Tracking::Track() {
     if(!is_lost && mCurrentFrame.isSet()) {
         Sophus::SE3f Tcr_ = mCurrentFrame.GetPose() * mCurrentFrame.mpReferenceKF->GetPoseInverse();
         {
-            unique_lock< mutex > lock(mlMutexSave);
+            //unique_lock< mutex > lock(mlMutexSave);
             mlRelativeFramePoses.push_back(Tcr_);
             mlpReferences.push_back(mCurrentFrame.mpReferenceKF);
             mlFrameTimes.push_back(mCurrentFrame.mTimeStamp);
@@ -1693,7 +1693,7 @@ void Tracking::Track() {
     } else {
         // This can happen if tracking is lost
         {
-            unique_lock< mutex > lock(mlMutexSave);
+            //unique_lock< mutex > lock(mlMutexSave);
             mlRelativeFramePoses.push_back(mlRelativeFramePoses.back());
             mlpReferences.push_back(mlpReferences.back());
             mlFrameTimes.push_back(mlFrameTimes.back());
