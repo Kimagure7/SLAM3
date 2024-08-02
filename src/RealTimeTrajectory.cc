@@ -3,12 +3,18 @@
 #include "RealTimeTrajectory.h"
 using nlohmann::json;
 RealTimeTrajectory::RealTimeTrajectory(const float fps, const int targetPort, const string targetIP, const string fileSavePath)
-    : mT(1e3 / fps), tPort(targetPort), mFileSavePath(fileSavePath), mbFinishRequested(false), tIP(targetIP), mbAckReceived(false), frameCount(0), max_connect_time(4) {
-    CreateSocket(targetPort, targetIP);
+    : mT(1e3 / fps), tPort(targetPort), mFileSavePath(fileSavePath), mbFinishRequested(false), tIP(targetIP), mbAckReceived(false), frameCount(0), max_connect_time(4){
+    init_success = CreateSocket(targetPort, targetIP);
 }
 
 void RealTimeTrajectory::Run() {
     cout << "RealTimeTrajectory::Run()" << endl;
+    while (!init_success)
+    {
+        init_success = ReconnectSocket();
+        sleep(1);
+    }
+    
     while(1) {
         if(!CheckTcw()) {
             usleep(mT / 2);
@@ -130,10 +136,10 @@ bool RealTimeTrajectory::RecvAck(int frameID) {
     }
 }
 
-void RealTimeTrajectory::ReconnectSocket() {
+bool RealTimeTrajectory::ReconnectSocket() {
     cout << "ReconnectSocket" << endl;
     close(sock);
-    CreateSocket(tPort, tIP);
+    return CreateSocket(tPort, tIP);
 }
 
 bool RealTimeTrajectory::CreateSocket(const int targetPort, const string targetIP) {

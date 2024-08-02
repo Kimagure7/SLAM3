@@ -33,7 +33,7 @@ private:
     int frameCount;
     int sock;
     int max_connect_time = 5;
-
+    bool init_success = false;
     // Tracking *mpTracker;
     std::mutex mMutexFinish, mMutexQueue;
     std::vector< std::pair< Sophus::SE3f, bool > > mHistoryTcw;
@@ -48,6 +48,6 @@ private:
     bool RecvAck(int frameID);
     void SendTcw(std::pair< Sophus::SE3f, bool > data);
     bool CreateSocket(const int targetPort, const string targetIP);
-    void ReconnectSocket();
+    bool ReconnectSocket();
 };
 #endif    // REALTIMETRAJECTORY_H
