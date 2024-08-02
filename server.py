@@ -43,6 +43,7 @@ def server_program():
                     
                 except json.JSONDecodeError as e:
                     print("Invalid JSON received:", e)
+                time.sleep(0.01)
                 
         except Exception as e:
             print("Error occurred:", e)
