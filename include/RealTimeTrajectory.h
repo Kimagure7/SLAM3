@@ -33,10 +33,12 @@ private:
     int frameCount;
     int sock;
     int max_connect_time = 5;
+
     // Tracking *mpTracker;
     std::mutex mMutexFinish, mMutexQueue;
     std::vector< std::pair< Sophus::SE3f, bool > > mHistoryTcw;
     std::queue< std::pair< Sophus::SE3f, bool > > mQueueTcw;
+    
     // bool ParseRealTimeTrajectoryParamFile(cv::FileStorage &fSettings);
     // void newParameterLoader(Settings *settings);
     bool CheckFinish();

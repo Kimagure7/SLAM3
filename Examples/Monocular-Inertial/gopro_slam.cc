@@ -124,7 +124,7 @@ int main(int argc, char **argv) {
     app.add_flag("-g,--enable_gui", enable_gui);
 
     int num_threads = 4;
-    app.add_flag("-n,--num_threads", num_threads);
+    app.add_option("-n,--num_threads", num_threads);
 
     std::string mask_img_path;
     app.add_option("--mask_img", mask_img_path);

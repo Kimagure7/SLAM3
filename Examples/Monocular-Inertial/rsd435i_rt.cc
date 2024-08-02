@@ -20,6 +20,7 @@
 #include <librealsense2/rs.hpp>
 using namespace std;
 using nlohmann::json;
+
 void signal_callback_handler(int signum) {
     cout << "gopro_slam.cc Caught signal " << signum << endl;
     // Terminate program
@@ -32,10 +33,8 @@ rs2_vector interpolateMeasure(const double target_time,
 int main(int argc, char **argv) {
 
     signal(SIGINT, signal_callback_handler);
-
     // CLI parsing
     CLI::App app{ "D435i SLAM" };
-
     std::string vocabulary = "../../Vocabulary/ORBvoc.txt";
     app.add_option("-v,--vocabulary", vocabulary)->capture_default_str();
 
@@ -55,7 +54,7 @@ int main(int argc, char **argv) {
     app.add_option("--save_map", save_map);
 
     int num_threads = 4;
-    app.add_flag("-n,--num_threads", num_threads);
+    app.add_option("-n,--num_threads", num_threads);
 
     // Aruco tag for initialization
     int aruco_dict_id = cv::aruco::DICT_4X4_50;
@@ -67,20 +66,35 @@ int main(int argc, char **argv) {
     float init_tag_size = 0.16;    // in meters
     app.add_option("--init_tag_size", init_tag_size);
 
+    string target_ip = "127.0.0.1";
+    app.add_option("--target_ip", target_ip);
+
+    int target_port = 0;
+    app.add_option("--target_port", target_port);
+
+
+    // if lost more than max_lost_frames, terminate
+    // disable the check if <= 0
+    // int max_lost_frames = -1;
+    // app.add_option("--max_lost_frames", max_lost_frames);
+
     try {
         app.parse(argc, argv);
     } catch(const CLI::ParseError &e) {
         return app.exit(e);
     }
-    // if lost more than max_lost_frames, terminate
-    // disable the check if <= 0
-    int max_lost_frames = -1;
-    app.add_option("--max_lost_frames", max_lost_frames);
+
+    cout << "num_threads: " << num_threads << endl;
+    cv::setNumThreads(num_threads);
+
+
+
     cout << "setting file: " << setting
          << "\nvocabulary file: " << vocabulary
          << "\noutput_trajectory_tum: " << output_trajectory_tum
          << "\noutput_trajectory_csv: " << output_trajectory_csv
          << endl;
+         
     double offset = 0;    // ms
 
     rs2::context ctx;
@@ -240,9 +254,12 @@ int main(int argc, char **argv) {
         aruco_dict, init_tag_id, init_tag_size);
     float imageScale = SLAM.GetImageScale();
 
-    RealTimeTrajectory *mpRealTimeTrajectory = new RealTimeTrajectory(30, 10066, "192.168.110.13", "trajectory.csv");
     std::thread *pRtTraj;
-    pRtTraj = new std::thread(&RealTimeTrajectory::Run, mpRealTimeTrajectory);
+    RealTimeTrajectory *mpRealTimeTrajectory;
+    if(target_port) {
+        mpRealTimeTrajectory = new RealTimeTrajectory(30, target_port, target_ip, output_trajectory_csv);
+        pRtTraj              = new std::thread(&RealTimeTrajectory::Run, mpRealTimeTrajectory);
+    }
     double timestamp;
     cv::Mat im;
 
@@ -314,12 +331,16 @@ int main(int argc, char **argv) {
 
         // Pass the image to the SLAM system
         auto result = SLAM.LocalizeMonocular(im, timestamp, vImuMeas);
-        mpRealTimeTrajectory->AddTcw(result);
+        if(target_port) {
+            mpRealTimeTrajectory->AddTcw(result);
+        }
         // Clear the previous IMU measurements to load the new ones
         vImuMeas.clear();
     }
     cout << "System shutdown!\n";
-    mpRealTimeTrajectory->RequestFinish();
+    if(target_port) {
+        mpRealTimeTrajectory->RequestFinish();
+    }
     if(load_map.empty() && !save_map.empty()) {
         SLAM.SaveAtlas(ORB_SLAM3::System::FileType::BINARY_FILE, save_map, vocabulary);
     }
