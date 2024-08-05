@@ -20,9 +20,7 @@ Examples/aruco/output
 .vscode/
 Examples/Monocular-Inertial/mono_inertial_euroc
 Examples/Monocular-Inertial/mono_inertial_tum_vi
-Examples/Monocular-Inertial/mono_inertial_realsense_t265
 Examples/Monocular-Inertial/mono_inertial_realsense_D435i
-Examples/Monocular-Inertial/mono_inertial_realsense_D435i_2
 
 
 Examples/Calibration/bag/*
