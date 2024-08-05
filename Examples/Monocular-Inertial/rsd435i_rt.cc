@@ -38,7 +38,7 @@ int main(int argc, char **argv) {
     std::string vocabulary = "../../Vocabulary/ORBvoc.txt";
     app.add_option("-v,--vocabulary", vocabulary)->capture_default_str();
 
-    std::string setting = "gopro10_maxlens_fisheye_setting_v1.yaml";
+    std::string setting = "../yaml/radtand435i.yaml";
     app.add_option("-s,--setting", setting)->capture_default_str();
 
     std::string output_trajectory_tum;
@@ -115,7 +115,7 @@ int main(int argc, char **argv) {
             if(index == 1) {
                 sensor.set_option(RS2_OPTION_ENABLE_AUTO_EXPOSURE, 1);
                 // sensor.set_option(RS2_OPTION_AUTO_EXPOSURE_LIMIT,5000);
-                sensor.set_option(RS2_OPTION_EMITTER_ENABLED, 0);    // switch off emitter
+                sensor.set_option(RS2_OPTION_EMITTER_ENABLED, 1);    // emitter on for depth information
             }
             std::cout << "  " << index << " : " << sensor.get_info(RS2_CAMERA_INFO_NAME) << std::endl;
             if(index == 2) {
