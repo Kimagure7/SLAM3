@@ -191,3 +191,9 @@ target_link_libraries(rsd435i_rt ${PROJECT_NAME})
 #     target_link_libraries(recorder_realsense_D435i ${PROJECT_NAME})
 # endif()
 
+#RGBD+IMU
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/Examples/RGB-D-Inertial)
+
+add_executable(rsd435i_rgbd
+Examples/RGB-D-Inertial/rsd435i_rgbd.cc)
+target_link_libraries(rsd435i_rgbd ${PROJECT_NAME})
