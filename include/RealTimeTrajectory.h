@@ -33,21 +33,23 @@ private:
     int frameCount;
     int sock;
     int max_connect_time = 5;
-    bool init_success = false;
+    bool init_success    = false;
     // Tracking *mpTracker;
     std::mutex mMutexFinish, mMutexQueue;
     std::vector< std::pair< Sophus::SE3f, bool > > mHistoryTcw;
     std::queue< std::pair< Sophus::SE3f, bool > > mQueueTcw;
-    
+
     // bool ParseRealTimeTrajectoryParamFile(cv::FileStorage &fSettings);
     // void newParameterLoader(Settings *settings);
     bool CheckFinish();
     bool SaveTrajectory();    // debug use
     std::pair< Sophus::SE3f, bool > GetTcw();
     bool CheckTcw();
-    bool RecvAck(int frameID);
+    void CleanTcw();
+    int QueryTcw();
     void SendTcw(std::pair< Sophus::SE3f, bool > data);
     bool CreateSocket(const int targetPort, const string targetIP);
     bool ReconnectSocket();
+    bool RecvAck(int frameID);
 };
 #endif    // REALTIMETRAJECTORY_H

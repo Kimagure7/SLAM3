@@ -3,18 +3,17 @@
 #include "RealTimeTrajectory.h"
 using nlohmann::json;
 RealTimeTrajectory::RealTimeTrajectory(const float fps, const int targetPort, const string targetIP, const string fileSavePath)
-    : mT(1e3 / fps), tPort(targetPort), mFileSavePath(fileSavePath), mbFinishRequested(false), tIP(targetIP), mbAckReceived(false), frameCount(0), max_connect_time(4){
+    : mT(1e3 / fps), tPort(targetPort), mFileSavePath(fileSavePath), mbFinishRequested(false), tIP(targetIP), mbAckReceived(false), frameCount(0), max_connect_time(3) {
     init_success = CreateSocket(targetPort, targetIP);
 }
 
 void RealTimeTrajectory::Run() {
     cout << "RealTimeTrajectory::Run()" << endl;
-    while (!init_success)
-    {
+    while(!init_success) {
         init_success = ReconnectSocket();
         sleep(1);
     }
-    
+
     while(1) {
         if(!CheckTcw()) {
             usleep(mT / 2);
@@ -84,9 +83,9 @@ void RealTimeTrajectory::SendTcw(std::pair< Sophus::SE3f, bool > data) {
         j["q_w"]         = 1;
         j["frame_count"] = frameCount;
     }
-    string s = j.dump();
-    send(sock, s.c_str(), s.size(), 0);
-    if(!RecvAck(frameCount)) {
+    string s           = j.dump();
+    ssize_t bytes_sent = send(sock, s.c_str(), s.size(), 0);
+    if(bytes_sent == -1 || !RecvAck(frameCount)) {
         ReconnectSocket();
     }
     frameCount++;
@@ -163,6 +162,12 @@ bool RealTimeTrajectory::CreateSocket(const int targetPort, const string targetI
     }
     sock = s;
     cout << "socket connect to" << targetIP << ":" << targetPort << endl;
+    if(!init_success) {
+        // 把第一次成功之前的tcw清空 后面的不清空 最多丢几帧 这里却有可能丢不少
+        int num_tcw = QueryTcw();
+        CleanTcw();
+        cout << "There are " << num_tcw << " tcw in the queue. Clean all of them." << endl;
+    }
     return true;
 }
 
@@ -175,6 +180,17 @@ void RealTimeTrajectory::AddTcw(std::pair< Sophus::SE3f, bool > result) {
 bool RealTimeTrajectory::CheckTcw() {
     unique_lock< mutex > lock(mMutexQueue);
     return !mQueueTcw.empty();
+}
+
+void RealTimeTrajectory::CleanTcw() {
+    unique_lock< mutex > lock(mMutexQueue);
+    while(!mQueueTcw.empty()) {
+        mQueueTcw.pop();
+    }
+}
+int RealTimeTrajectory::QueryTcw() {
+    unique_lock< mutex > lock(mMutexQueue);
+    return mQueueTcw.size();
 }
 
 std::pair< Sophus::SE3f, bool > RealTimeTrajectory::GetTcw() {
