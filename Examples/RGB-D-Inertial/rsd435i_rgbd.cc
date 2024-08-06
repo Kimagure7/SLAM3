@@ -74,16 +74,16 @@ int main(int argc, char **argv) {
     app.add_option("--init_tag_size", init_tag_size);
 
     string tIP = "127.0.0.1";
-    app.add_option("--target_ip", tIP);
+    app.add_option("--tIP", tIP);
 
     int tPort = 0;
-    app.add_option("--target_port", tPort);
+    app.add_option("--tPort", tPort);
 
     string cIP = "127.0.0.1";
-    app.add_option("--target_ip", cIP);
+    app.add_option("--cIP", cIP);
 
     int cPort = 0;
-    app.add_option("--target_port", cPort);
+    app.add_option("--cPort", cPort);
 
 
     // if lost more than max_lost_frames, terminate
@@ -295,7 +295,7 @@ int main(int argc, char **argv) {
     std::thread *pRtTraj;
     RealTimeTrajectory *mpRealTimeTrajectory;
     if(tPort) {
-        mpRealTimeTrajectory = new RealTimeTrajectory(tPort, tIP, 30, output_trajectory_csv);
+        mpRealTimeTrajectory = new RealTimeTrajectory(tPort, tIP,cPort,cIP,30, output_trajectory_csv);
         pRtTraj              = new std::thread(&RealTimeTrajectory::Run, mpRealTimeTrajectory);
     }
 
