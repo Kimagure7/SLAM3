@@ -73,11 +73,17 @@ int main(int argc, char **argv) {
     float init_tag_size = 0.16;    // in meters
     app.add_option("--init_tag_size", init_tag_size);
 
-    string target_ip = "127.0.0.1";
-    app.add_option("--target_ip", target_ip);
+    string tIP = "127.0.0.1";
+    app.add_option("--target_ip", tIP);
 
-    int target_port = 0;
-    app.add_option("--target_port", target_port);
+    int tPort = 0;
+    app.add_option("--target_port", tPort);
+
+    string cIP = "127.0.0.1";
+    app.add_option("--target_ip", cIP);
+
+    int cPort = 0;
+    app.add_option("--target_port", cPort);
 
 
     // if lost more than max_lost_frames, terminate
@@ -289,8 +295,8 @@ int main(int argc, char **argv) {
 
     std::thread *pRtTraj;
     RealTimeTrajectory *mpRealTimeTrajectory;
-    if(target_port) {
-        mpRealTimeTrajectory = new RealTimeTrajectory(30, target_port, target_ip, output_trajectory_csv);
+    if(tPort) {
+        mpRealTimeTrajectory = new RealTimeTrajectory(tPort, tIP, 30, output_trajectory_csv);
         pRtTraj              = new std::thread(&RealTimeTrajectory::Run, mpRealTimeTrajectory);
     }
 
@@ -374,14 +380,22 @@ int main(int argc, char **argv) {
 
         // Pass the image to the SLAM system
         auto result = SLAM.LocalizeMonocular(im, timestamp, vImuMeas);
-        if(target_port) {
-            mpRealTimeTrajectory->AddTcw(result);
+        if(tPort) {
+            if(mpRealTimeTrajectory->CheckState() == RealTimeTrajectory::STATE::TRACK) {
+                RealTimeTrajectory::TcwData data(result.second, result.first);
+                mpRealTimeTrajectory->AddTcw(data);
+            } else if(mpRealTimeTrajectory->CheckState() == RealTimeTrajectory::STATE::CALIB) {
+                RealTimeTrajectory::TcwData data(result.second, result.first, im, depth);
+                mpRealTimeTrajectory->AddTcw(data);
+            } else {
+                cout << "State is not TRACK or CALIB\n";
+            }
         }
         // Clear the previous IMU measurements to load the new ones
         vImuMeas.clear();
     }
     cout << "System shutdown!\n";
-    if(target_port) {
+    if(tPort) {
         mpRealTimeTrajectory->RequestFinish();
     }
     if(load_map.empty() && !save_map.empty()) {

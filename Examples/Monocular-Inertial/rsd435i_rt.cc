@@ -94,7 +94,7 @@ int main(int argc, char **argv) {
          << "\noutput_trajectory_tum: " << output_trajectory_tum
          << "\noutput_trajectory_csv: " << output_trajectory_csv
          << endl;
-         
+
     double offset = 0;    // ms
 
     rs2::context ctx;
@@ -257,7 +257,7 @@ int main(int argc, char **argv) {
     std::thread *pRtTraj;
     RealTimeTrajectory *mpRealTimeTrajectory;
     if(target_port) {
-        mpRealTimeTrajectory = new RealTimeTrajectory(30, target_port, target_ip, output_trajectory_csv);
+        mpRealTimeTrajectory = new RealTimeTrajectory(target_port, target_ip, 30, output_trajectory_csv);
         pRtTraj              = new std::thread(&RealTimeTrajectory::Run, mpRealTimeTrajectory);
     }
     double timestamp;
@@ -332,7 +332,8 @@ int main(int argc, char **argv) {
         // Pass the image to the SLAM system
         auto result = SLAM.LocalizeMonocular(im, timestamp, vImuMeas);
         if(target_port) {
-            mpRealTimeTrajectory->AddTcw(result);
+            RealTimeTrajectory::TcwData data(result.second, result.first);
+            mpRealTimeTrajectory->AddTcw(data);
         }
         // Clear the previous IMU measurements to load the new ones
         vImuMeas.clear();
