@@ -84,16 +84,19 @@ void RealTimeTrajectory::RunCalibration() {
             break;
         }
         if(result.isOK) {
-            localFrameCount++;
+            if(result.img.empty() || result.depth.empty()) {
+                // still waiting for image data
+                continue;
+            }
+            if(localFrameCount++ % 30 == 0) {
+                // send every 30 frames
+                SendTcw(result);
+                if(mbCalibFinished) {
+                    break;
+                }
+            }
         } else {
             cout << "RTT find a frame islost!!!!" << endl;
-        }
-        if(localFrameCount % 30 == 0) {
-            // send every 30 frames
-            SendTcw(result);
-            if(mbCalibFinished) {
-                break;
-            }
         }
     }
     cout << "RealTimeTrajectory::RunCalibration() finished" << endl;
