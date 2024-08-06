@@ -64,12 +64,9 @@ void RealTimeTrajectory::WaitForStableTrack() {
 
 void RealTimeTrajectory::RunCalibration() {
     cout << "RealTimeTrajectory::RunCalibration()" << endl;
-
-    bool initSocket = false;
     while(!CreateSocket(cPort, cIP)) {
         usleep(1000);
     }
-
     {
         unique_lock< mutex > lock(mMutexState);
         mState = STATE::CALIB;

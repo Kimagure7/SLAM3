@@ -25,7 +25,7 @@ using nlohmann::json;
 
 
 void signal_callback_handler(int signum) {
-    cout << "gopro_slam.cc Caught signal " << signum << endl;
+    std::cout << "gopro_slam.cc Caught signal " << signum << endl;
     // Terminate program
     exit(signum);
 }
@@ -97,15 +97,15 @@ int main(int argc, char **argv) {
         return app.exit(e);
     }
 
-    cout << "num_threads: " << num_threads << endl;
+    std::cout << "num_threads: " << num_threads << endl;
     cv::setNumThreads(num_threads);
 
 
-    cout << "setting file: " << setting
-         << "\nvocabulary file: " << vocabulary
-         << "\noutput_trajectory_tum: " << output_trajectory_tum
-         << "\noutput_trajectory_csv: " << output_trajectory_csv
-         << endl;
+    std::cout << "setting file: " << setting
+              << "\nvocabulary file: " << vocabulary
+              << "\noutput_trajectory_tum: " << output_trajectory_tum
+              << "\noutput_trajectory_csv: " << output_trajectory_csv
+              << endl;
 
     double offset = 0;    // ms
 
@@ -167,7 +167,6 @@ int main(int argc, char **argv) {
     vector< double > v_accel_timestamp_sync;
     vector< rs2_vector > v_accel_data_sync;
 
-    cv::Mat imCV, depthCV;
     int width_img, height_img;
     double timestamp_image = -1.0;
     bool image_ready       = false;
@@ -283,7 +282,7 @@ int main(int argc, char **argv) {
 
     double timestamp;
     cv::Mat im, depth;
-    bool needDepth                              = true;    // true when depth is needed for scale calibration
+
     cv::Ptr< cv::aruco::Dictionary > aruco_dict = cv::aruco::getPredefinedDictionary(aruco_dict_id);
     ORB_SLAM3::System SLAM(
         vocabulary, setting,
@@ -312,6 +311,7 @@ int main(int argc, char **argv) {
         std::vector< double > vGyro_times;
         std::vector< rs2_vector > vAccel;
         std::vector< double > vAccel_times;
+        bool needDepth = mpRealTimeTrajectory->CheckState();
         rs2::frameset fs;
         {
             std::unique_lock< std::mutex > lk(imu_mutex);
@@ -322,7 +322,7 @@ int main(int argc, char **argv) {
 
             fs = fsSLAM;
             if(count_im_buffer > 1)    // 处理不过来 丢帧咯
-                cout << count_im_buffer - 1 << " dropped frs\n";
+                std::cout << count_im_buffer - 1 << " dropped frs\n";
             count_im_buffer = 0;
 
             while(v_gyro_timestamp.size() > v_accel_timestamp_sync.size()) {    // 不断同步
@@ -352,15 +352,22 @@ int main(int argc, char **argv) {
 
             image_ready = false;
         }
-        // Perform alignment here
-        auto processed = align.process(fs);
 
-        // Trying to get both other and aligned depth frames
-        rs2::video_frame color_frame = processed.first(align_to);
-        rs2::depth_frame depth_frame = processed.get_depth_frame();
+        if(needDepth) {
+            // Perform alignment here
+            auto processed = align.process(fs);
 
-        im    = cv::Mat(cv::Size(width_img, height_img), CV_8UC3, (void *)(color_frame.get_data()), cv::Mat::AUTO_STEP);
-        depth = cv::Mat(cv::Size(width_img, height_img), CV_16U, (void *)(depth_frame.get_data()), cv::Mat::AUTO_STEP);
+            // Trying to get both other and aligned depth frames
+            rs2::video_frame color_frame = processed.first(align_to);
+            rs2::depth_frame depth_frame = processed.get_depth_frame();
+
+            im    = cv::Mat(cv::Size(width_img, height_img), CV_8UC3, (void *)(color_frame.get_data()), cv::Mat::AUTO_STEP);
+            depth = cv::Mat(cv::Size(width_img, height_img), CV_16U, (void *)(depth_frame.get_data()), cv::Mat::AUTO_STEP);
+        } else {
+            rs2::video_frame color_frame = fs.get_color_frame();
+            im                           = cv::Mat(cv::Size(width_img, height_img), CV_8UC3, (void *)(color_frame.get_data()), cv::Mat::AUTO_STEP);
+        }
+
 
         for(int i = 0; i < vGyro.size(); ++i) {
             ORB_SLAM3::IMU::Point lastPoint(vAccel[i].x, vAccel[i].y, vAccel[i].z,
@@ -381,20 +388,18 @@ int main(int argc, char **argv) {
         // Pass the image to the SLAM system
         auto result = SLAM.LocalizeMonocular(im, timestamp, vImuMeas);
         if(tPort) {
-            if(mpRealTimeTrajectory->CheckState() == RealTimeTrajectory::STATE::TRACK) {
-                RealTimeTrajectory::TcwData data(result.second, result.first);
-                mpRealTimeTrajectory->AddTcw(data);
-            } else if(mpRealTimeTrajectory->CheckState() == RealTimeTrajectory::STATE::CALIB) {
+            if(needDepth) {
                 RealTimeTrajectory::TcwData data(result.second, result.first, im, depth);
                 mpRealTimeTrajectory->AddTcw(data);
             } else {
-                cout << "State is not TRACK or CALIB\n";
+                RealTimeTrajectory::TcwData data(result.second, result.first);
+                mpRealTimeTrajectory->AddTcw(data);
             }
         }
         // Clear the previous IMU measurements to load the new ones
         vImuMeas.clear();
     }
-    cout << "System shutdown!\n";
+    std::cout << "System shutdown!\n";
     if(tPort) {
         mpRealTimeTrajectory->RequestFinish();
     }
