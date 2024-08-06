@@ -129,7 +129,7 @@ bool RealTimeTrajectory::SaveTrajectory() {
     return true;
 }
 
-void RealTimeTrajectory::SendTcw(TcwData data) {
+bool RealTimeTrajectory::SendTcw(TcwData data) {
     // use base64 to encode image and depth
     json j;
     if(data.isOK) {
@@ -161,9 +161,27 @@ void RealTimeTrajectory::SendTcw(TcwData data) {
         j["q_w"]         = 1;
         j["frame_count"] = frameCount;
     }
-    string s           = j.dump();
-    ssize_t bytes_sent = send(sock, s.c_str(), s.size(), 0);
-    if(bytes_sent == -1 || !RecvAck(frameCount)) {
+    string s = j.dump();
+
+    size_t total_sent = 0;           // total bytes sent
+    size_t bytes_left = s.size();    // bytes left to send
+
+    while(total_sent < s.size()) {
+        ssize_t bytes_sent = send(sock, s.c_str() + total_sent, bytes_left, 0);
+
+        if(bytes_sent == -1) {
+            cout << "error in send tcw" << endl;
+            return;    // or handle error as needed
+        }
+
+        total_sent += bytes_sent;
+        bytes_left -= bytes_sent;
+
+        if(bytes_left > 0) {
+            cout << "Partial send. Sent: " << total_sent << ", Remaining: " << bytes_left << endl;
+        }
+    }
+    if(!RecvAck(frameCount)) {
         if(mState == STATE::TRACK) {
             ReconnectSocket(tPort, tIP);
         } else if(mState == STATE::CALIB) {

@@ -85,7 +85,7 @@ private:
     bool CheckTcw();
     void CleanTcw();
     int QueryTcw();
-    void SendTcw(TcwData data);
+    bool SendTcw(TcwData data);
 
     bool CreateSocket(const int targetPort, const string targetIP);
     bool ReconnectSocket(const int targetPort, const string targetIP);
