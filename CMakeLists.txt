@@ -84,6 +84,8 @@ src/TwoViewReconstruction.cc
 src/Config.cc
 src/Settings.cc
 src/RealTimeTrajectory.cc
+src/base64.cc
+include/base64.h
 include/System.h
 include/Tracking.h
 include/LocalMapping.h
