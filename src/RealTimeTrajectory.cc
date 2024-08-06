@@ -12,14 +12,19 @@ RealTimeTrajectory::RealTimeTrajectory(const int t_Port, const string t_IP, cons
 }
 void RealTimeTrajectory::Run() {
     cout << "RealTimeTrajectory::Run()" << endl;
-    WaitForStableTrack();
-    RunCalibration();
-
+    if(cPort) {
+        WaitForStableTrack();
+        RunCalibration();
+    }
+    while(!CreateSocket(tPort, tIP)) {
+        usleep(1000);
+    }
     // start tracking
     {
         unique_lock< mutex > lock(mMutexState);
         mState = STATE::TRACK;
     }
+
     while(1) {
         if(!CheckTcw()) {
             usleep(mT / 2);
@@ -61,11 +66,8 @@ void RealTimeTrajectory::RunCalibration() {
     cout << "RealTimeTrajectory::RunCalibration()" << endl;
 
     bool initSocket = false;
-    while(!initSocket) {
-        initSocket = CreateSocket(cPort, cIP);
-        if(!initSocket) {
-            usleep(1000);
-        }
+    while(!CreateSocket(cPort, cIP)) {
+        usleep(1000);
     }
 
     {
@@ -302,9 +304,9 @@ bool RealTimeTrajectory::CheckFinish() {
     return mbFinishRequested;
 }
 
-RealTimeTrajectory::STATE RealTimeTrajectory::CheckState() {
+bool RealTimeTrajectory::CheckState() {
     unique_lock< mutex > lock(mMutexState);
-    return mState;
+    return mState == STATE::CALIB;
 }
 
 std::string RealTimeTrajectory::Mat2Base64(const cv::Mat &image, std::string imgType) {

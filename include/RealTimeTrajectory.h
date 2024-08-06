@@ -45,7 +45,7 @@ public:
     void Run();
     void RequestFinish();
     void AddTcw(TcwData result);
-    STATE CheckState();
+    bool CheckState();
 
 private:
     // bool ParseRealTimeTrajcetoryParamFile(cv::FileStorage &fSettings);
