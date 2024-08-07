@@ -47,6 +47,8 @@ public:
     void AddTcw(TcwData result);
     bool CheckState();
 
+    const float *intrinsicsMatrix;
+
 private:
     // bool ParseRealTimeTrajcetoryParamFile(cv::FileStorage &fSettings);
 
@@ -80,6 +82,7 @@ private:
     // Wait for SLAM track to be stable. Set to true if isOK is true for the last 60 frames
     void WaitForStableTrack();
     void RunCalibration();
+    void SendIntrinsic();
 
     TcwData GetTcw();
     bool CheckTcw();

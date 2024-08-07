@@ -64,14 +64,13 @@ void RealTimeTrajectory::WaitForStableTrack() {
 
 void RealTimeTrajectory::RunCalibration() {
     cout << "RealTimeTrajectory::RunCalibration()" << endl;
-    while(!CreateSocket(cPort, cIP)) {
-        usleep(1000);
-    }
     {
         unique_lock< mutex > lock(mMutexState);
         mState = STATE::CALIB;
     }
-
+    while(!CreateSocket(cPort, cIP)) {
+        usleep(1000);
+    }
     int localFrameCount = 0;
     while(1) {
         if(!CheckTcw()) {
@@ -87,8 +86,8 @@ void RealTimeTrajectory::RunCalibration() {
                 // still waiting for image data
                 continue;
             }
-            if(localFrameCount++ % 30 == 0) {
-                // send every 30 frames
+            if(localFrameCount++ % 15 == 0) {
+                // send every 15 frames
                 SendTcw(result);
                 if(mbCalibFinished) {
                     break;
@@ -166,14 +165,12 @@ bool RealTimeTrajectory::SendTcw(TcwData data) {
     size_t total_sent = 0;           // total bytes sent
     size_t bytes_left = s.size();    // bytes left to send
 
-    string ssize = to_string(s.size());
-    ssize += "\n";    // add \n to split size and data
+    string ssize            = to_string(s.size());
     ssize_t bytes_sent_size = send(sock, ssize.c_str(), ssize.size(), 0);
-    if(bytes_sent_size == -1) {
-        cout << "error in send tcw data length" << endl;
-        return false;    // or handle error as needed
+    if(bytes_sent_size == -1 || !RecvAck(bytes_left)) {
+        cout << "error in send tcw" << endl;
     }
-    
+
     while(total_sent < s.size()) {
         ssize_t bytes_sent = send(sock, s.c_str() + total_sent, bytes_left, 0);
         if(bytes_sent == -1) {
@@ -186,8 +183,7 @@ bool RealTimeTrajectory::SendTcw(TcwData data) {
             cout << "Partial send. Sent: " << total_sent << ", Remaining: " << bytes_left << endl;
         }
     }
-
-    if(!RecvAck(frameCount)) {
+    if(!RecvAck(-1)) {
         if(mState == STATE::TRACK) {
             ReconnectSocket(tPort, tIP);
         } else if(mState == STATE::CALIB) {
@@ -196,12 +192,16 @@ bool RealTimeTrajectory::SendTcw(TcwData data) {
             cout << "Unknown state 166" << endl;
         }
     }
-
     frameCount++;
     return true;
 }
 
-bool RealTimeTrajectory::RecvAck(int frameID) {
+void RealTimeTrajectory::SendIntrinsic() {
+    // use base64 to encode image and depth
+    json j;
+    
+}
+bool RealTimeTrajectory::RecvAck(int dataLength) {
     // edit 8.6 : not use frameID, use normal ack
 
     char buffer[1024];
@@ -219,6 +219,7 @@ bool RealTimeTrajectory::RecvAck(int frameID) {
     } else if(mState == STATE::CALIB) {
         timeout.tv_sec = 3;
     } else {
+        timeout.tv_sec = 1;
         cout << "Unknown state 186" << endl;
     }
     timeout.tv_usec = 0;
@@ -239,9 +240,12 @@ bool RealTimeTrajectory::RecvAck(int frameID) {
         return false;
     }
     string recvStr(buffer, recvSize);
+
     try {
         int ack = stoi(recvStr);
-        if(ack == frameState::ACK || ack == frameState::THIS_FRAME_OK || ack == frameState::THIS_FRAME_FAIL) {
+        if(ack == dataLength) {
+            return true;
+        } else if(ack == frameState::ACK || ack == frameState::THIS_FRAME_OK || ack == frameState::THIS_FRAME_FAIL) {
             return true;
         } else if(ack == frameState::CALIB_OK) {
             mbCalibFinished = true;
@@ -305,6 +309,7 @@ void RealTimeTrajectory::CleanTcw() {
         mQueueTcw.pop();
     }
 }
+
 int RealTimeTrajectory::QueryTcw() {
     unique_lock< mutex > lock(mMutexQueue);
     return mQueueTcw.size();
