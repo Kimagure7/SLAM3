@@ -69,6 +69,7 @@ void RealTimeTrajectory::RunCalibration() {
     while(!CreateSocket(cPort, cIP)) {
         usleep(1000);
     }
+    SendIntrinsic();
     int localFrameCount = 0;
     while(1) {
         if(!CheckTcw()) {
@@ -119,8 +120,7 @@ bool RealTimeTrajectory::loadIntrinsics(const string &settingsFile) {
         settings_->camera1()->getParameter(2),
         settings_->camera1()->getParameter(3),
         settings_->camera1DistortionCoef(),
-        settings_->newImSize()
-    );
+        settings_->newImSize());
     return true;
 }
 
@@ -220,9 +220,24 @@ bool RealTimeTrajectory::SendTcw(TcwData data) {
 }
 
 void RealTimeTrajectory::SendIntrinsic() {
-    // use base64 to encode image and depth
     json j;
+    j["fx"]                 = intrinsicsMatrix->fx;
+    j["fy"]                 = intrinsicsMatrix->fy;
+    j["cx"]                 = intrinsicsMatrix->cx;
+    j["cy"]                 = intrinsicsMatrix->cy;
+    j["k1"]                 = intrinsicsMatrix->k1;
+    j["k2"]                 = intrinsicsMatrix->k2;
+    j["p1"]                 = intrinsicsMatrix->p1;
+    j["p2"]                 = intrinsicsMatrix->p2;
+    j["width"]              = intrinsicsMatrix->width;
+    j["height"]             = intrinsicsMatrix->height;
+    string s                = j.dump();
+    ssize_t bytes_sent_size = send(sock, s.c_str(), s.size(), 0);
+    if(bytes_sent_size == -1 || !RecvAck(-1)) {
+        cout << "error in send intrinsic" << endl;
+    }
 }
+
 bool RealTimeTrajectory::RecvAck(int dataLength) {
     // edit 8.6 : not use frameID, use normal ack
 
@@ -286,7 +301,13 @@ bool RealTimeTrajectory::RecvAck(int dataLength) {
 bool RealTimeTrajectory::ReconnectSocket(const int targetPort, const string targetIP) {
     cout << "ReconnectSocket" << endl;
     close(sock);
-    return CreateSocket(targetPort, targetIP);
+    if(CreateSocket(targetPort, targetIP)) {
+        if(mState == STATE::CALIB) {
+            SendIntrinsic();
+        }
+        return true;
+    }
+    return false;
 }
 
 bool RealTimeTrajectory::CreateSocket(const int targetPort, const string targetIP) {
