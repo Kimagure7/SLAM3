@@ -4,11 +4,9 @@
 using nlohmann::json;
 RealTimeTrajectory::RealTimeTrajectory(const int targetPort, const string targetIP, const float fps, const string fileSavePath)
     : mT(1e3 / fps), tPort(targetPort), mFileSavePath(fileSavePath), mbFinishRequested(false), tIP(targetIP), mbAckReceived(false), frameCount(0), max_connect_time(3), cPort(0), cIP(""), mState(STATE::START) {
-    // CreateSocket(targetPort, targetIP);
 }
 RealTimeTrajectory::RealTimeTrajectory(const int t_Port, const string t_IP, const int c_Port, const string c_IP, const float fps, const string fileSavePath)
     : mT(1e3 / fps), tPort(t_Port), mFileSavePath(fileSavePath), mbFinishRequested(false), tIP(t_IP), mbAckReceived(false), frameCount(0), max_connect_time(3), cPort(c_Port), cIP(c_IP), mState(STATE::START) {
-    // CreateSocket(targetPort, targetIP);
 }
 void RealTimeTrajectory::Run() {
     cout << "RealTimeTrajectory::Run()" << endl;
@@ -99,6 +97,31 @@ void RealTimeTrajectory::RunCalibration() {
     }
     cout << "RealTimeTrajectory::RunCalibration() finished" << endl;
     close(sock);
+}
+
+bool RealTimeTrajectory::loadIntrinsics(const string &settingsFile) {
+    cv::FileStorage fsSettings(settingsFile.c_str(), cv::FileStorage::READ);
+    if(!fsSettings.isOpened()) {
+        cerr << "Failed to open settings file at: " << settingsFile << endl;
+        exit(-1);
+    }
+    cv::FileNode node = fsSettings["File.version"];
+    if(!node.empty() && node.isString() && node.string() == "1.0") {
+        settings_ = new ORB_SLAM3::Settings(settingsFile, ORB_SLAM3::System::IMU_MONOCULAR);
+    } else {
+        settings_ = nullptr;
+        cout << "setting not in format" << endl;
+    }
+    fsSettings.release();
+    intrinsicsMatrix = new CameraIntrinsics(
+        settings_->camera1()->getParameter(0),
+        settings_->camera1()->getParameter(1),
+        settings_->camera1()->getParameter(2),
+        settings_->camera1()->getParameter(3),
+        settings_->camera1DistortionCoef(),
+        settings_->newImSize()
+    );
+    return true;
 }
 
 bool RealTimeTrajectory::SaveTrajectory() {
@@ -199,7 +222,6 @@ bool RealTimeTrajectory::SendTcw(TcwData data) {
 void RealTimeTrajectory::SendIntrinsic() {
     // use base64 to encode image and depth
     json j;
-    
 }
 bool RealTimeTrajectory::RecvAck(int dataLength) {
     // edit 8.6 : not use frameID, use normal ack

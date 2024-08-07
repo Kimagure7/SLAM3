@@ -1,6 +1,7 @@
 #ifndef REALTIMETRAJECTORY_H
 #define REALTIMETRAJECTORY_H
 
+#include "Settings.h"
 #include "base64.h"
 #include <System.h>
 #include <arpa/inet.h>
@@ -14,7 +15,9 @@
 #include <sys/time.h>
 #include <unistd.h>
 #include <vector>
+
 using namespace std;
+class ORB_SLAM3::Settings;
 class RealTimeTrajectory {
 public:
     struct TcwData {
@@ -26,6 +29,24 @@ public:
             : isOK(ok), Tcw(t), img(cv::Size(0, 0), CV_8UC3), depth(cv::Size(0, 0), CV_16U) {}
         TcwData(bool ok, const Sophus::SE3f &t, const cv::Mat &i, const cv::Mat &d)
             : isOK(ok), Tcw(t), img(i), depth(d) {}
+    };
+    struct CameraIntrinsics {
+        float fx, fy, cx, cy;
+        float k1, k2, p1, p2;
+        int width, height;
+
+        CameraIntrinsics(float fx, float fy, float cx, float cy, cv::Mat coeffs, cv::Size size)
+            : fx(fx), fy(fy), cx(cx), cy(cy), width(size.width), height(size.height) {
+            k1 = coeffs.at< float >(0);
+            k2 = coeffs.at< float >(1);
+            p1 = coeffs.at< float >(2);
+            p2 = coeffs.at< float >(3);
+        }
+        // Default constructor
+        CameraIntrinsics()
+            : fx(0.0f), fy(0.0f), cx(0.0f), cy(0.0f),
+              k1(0.0f), k2(0.0f), p1(0.0f), p2(0.0f),
+              width(0), height(0) {}
     };
     enum STATE {    // indicate the working state of the system
         START,
@@ -47,16 +68,16 @@ public:
     void AddTcw(TcwData result);
     bool CheckState();
 
-    const float *intrinsicsMatrix;
+    CameraIntrinsics *intrinsicsMatrix;
+    bool loadIntrinsics(const string &settingsFile);
 
 private:
-    // bool ParseRealTimeTrajcetoryParamFile(cv::FileStorage &fSettings);
-
     float mT;    // 1/fps in ms
     bool mbFinishRequested = false;
     bool mbCalibFinished   = false;
     const string mFileSavePath;
     STATE mState = START;
+    ORB_SLAM3::Settings *settings_;
 
     const int tPort, cPort;    // socket target port, track and calib port
     const string tIP, cIP;
