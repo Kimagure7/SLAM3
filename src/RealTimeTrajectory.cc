@@ -5,11 +5,14 @@ using nlohmann::json;
 RealTimeTrajectory::RealTimeTrajectory(const int targetPort, const string targetIP, const float fps, const string fileSavePath)
     : mT(1e3 / fps), tPort(targetPort), mFileSavePath(fileSavePath), mbFinishRequested(false), tIP(targetIP), mbAckReceived(false), frameCount(0), max_connect_time(3), cPort(0), cIP(""), mState(STATE::START) {
 }
-RealTimeTrajectory::RealTimeTrajectory(const int t_Port, const string t_IP, const int c_Port, const string c_IP, const float fps, const string fileSavePath)
+RealTimeTrajectory::RealTimeTrajectory(const string settingsFile, const int t_Port, const string t_IP, const int c_Port, const string c_IP, const float fps, const string fileSavePath)
     : mT(1e3 / fps), tPort(t_Port), mFileSavePath(fileSavePath), mbFinishRequested(false), tIP(t_IP), mbAckReceived(false), frameCount(0), max_connect_time(3), cPort(c_Port), cIP(c_IP), mState(STATE::START) {
+    loadIntrinsics(settingsFile);
 }
+
 void RealTimeTrajectory::Run() {
     cout << "RealTimeTrajectory::Run()" << endl;
+    cout << mFileSavePath << endl;
     if(cPort) {
         WaitForStableTrack();
         RunCalibration();
@@ -53,7 +56,7 @@ void RealTimeTrajectory::WaitForStableTrack() {
         } else {
             stable_count = 0;
         }
-        if(stable_count > 60) {
+        if(stable_count > 300) {
             break;
         }
     }
@@ -73,7 +76,7 @@ void RealTimeTrajectory::RunCalibration() {
     int localFrameCount = 0;
     while(1) {
         if(!CheckTcw()) {
-            usleep(mT / 2);
+            usleep(mT / 4);
             continue;
         }
         auto result = GetTcw();
@@ -85,7 +88,7 @@ void RealTimeTrajectory::RunCalibration() {
                 // still waiting for image data
                 continue;
             }
-            if(localFrameCount++ % 15 == 0) {
+            if(localFrameCount++ % 20 == 0) {
                 // send every 15 frames
                 SendTcw(result);
                 if(mbCalibFinished) {
@@ -93,7 +96,11 @@ void RealTimeTrajectory::RunCalibration() {
                 }
             }
         } else {
-            cout << "RTT find a frame islost!!!!" << endl;
+            cout << "RTT find a frame islost!!!! Resetting!!!" << endl;
+            while(!ReconnectSocket(cPort, cIP)) {
+                usleep(1000);
+            }
+            localFrameCount = 0;
         }
     }
     cout << "RealTimeTrajectory::RunCalibration() finished" << endl;
@@ -131,7 +138,7 @@ bool RealTimeTrajectory::SaveTrajectory() {
     f.open(saveFilePath.c_str());
     f << fixed;
     // add header
-    f << "is_lost,x,y,z,q_x,q_y,q_z,q_w" << endl;
+    f << "frame_idx,is_lost,x,y,z,q_x,q_y,q_z,q_w" << endl;
     for(size_t i = 0; i < mHistoryTcw.size(); i++) {
         auto result = mHistoryTcw[i];
         if(result.second) {
@@ -139,11 +146,11 @@ bool RealTimeTrajectory::SaveTrajectory() {
             Sophus::SE3f Twc     = Tcw.inverse();
             Eigen::Vector3f twc  = Twc.translation();
             Eigen::Quaternionf q = Twc.unit_quaternion();
-            f << "0,";
+            f << i << ",0,";
             f << setprecision(9) << twc(0) << ',' << twc(1) << ',' << twc(2) << ',';
             f << setprecision(9) << q.x() << ',' << q.y() << ',' << q.z() << ',' << q.w() << endl;
         } else {
-            f << "1,0,0,0,0,0,0,1" << endl;
+            f << i << ",1,0,0,0,0,0,0,1" << endl;
         }
     }
     f.close();
@@ -191,7 +198,7 @@ bool RealTimeTrajectory::SendTcw(TcwData data) {
     string ssize            = to_string(s.size());
     ssize_t bytes_sent_size = send(sock, ssize.c_str(), ssize.size(), 0);
     if(bytes_sent_size == -1 || !RecvAck(bytes_left)) {
-        cout << "error in send tcw" << endl;
+        cout << "error in send tcw length" << endl;
     }
 
     while(total_sent < s.size()) {
@@ -214,6 +221,7 @@ bool RealTimeTrajectory::SendTcw(TcwData data) {
         } else {
             cout << "Unknown state 166" << endl;
         }
+        return false;
     }
     frameCount++;
     return true;
@@ -321,7 +329,7 @@ bool RealTimeTrajectory::CreateSocket(const int targetPort, const string targetI
     addr.sin_family      = AF_INET;
     addr.sin_port        = htons(targetPort);
     addr.sin_addr.s_addr = inet_addr(targetIP.c_str());
-
+    cout << "connecting to " << targetIP << ":" << targetPort << endl;
     while(connect(s, (struct sockaddr *)&addr, sizeof(addr)) == -1) {
         cout << "connect failed, retrying times:" << ++retryingTimes << endl;
         usleep(200);
@@ -330,7 +338,7 @@ bool RealTimeTrajectory::CreateSocket(const int targetPort, const string targetI
         }
     }
     sock = s;
-    cout << "socket connect to" << targetIP << ":" << targetPort << endl;
+    cout << "socket connected to " << targetIP << ":" << targetPort << endl;
     return true;
 }
 

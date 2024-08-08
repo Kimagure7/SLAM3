@@ -61,7 +61,7 @@ public:
     };
 
     RealTimeTrajectory(const int targetPort, const string targetIP, const float fps = 30, const string fileSavePath = "");
-    RealTimeTrajectory(const int t_Port, const string t_IP, const int c_Port, const string c_IP, const float fps = 30, const string fileSavePath = "");
+    RealTimeTrajectory(const string settingsFile,const int t_Port, const string t_IP, const int c_Port, const string c_IP, const float fps = 30, const string fileSavePath = "");
 
     void Run();
     void RequestFinish();

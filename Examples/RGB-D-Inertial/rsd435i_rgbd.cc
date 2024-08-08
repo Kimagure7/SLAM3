@@ -295,7 +295,7 @@ int main(int argc, char **argv) {
     std::thread *pRtTraj;
     RealTimeTrajectory *mpRealTimeTrajectory;
     if(tPort) {
-        mpRealTimeTrajectory = new RealTimeTrajectory(tPort, tIP,cPort,cIP,30, output_trajectory_csv);
+        mpRealTimeTrajectory = new RealTimeTrajectory(setting,tPort, tIP,cPort,cIP,30, output_trajectory_csv);
         pRtTraj              = new std::thread(&RealTimeTrajectory::Run, mpRealTimeTrajectory);
     }
 
