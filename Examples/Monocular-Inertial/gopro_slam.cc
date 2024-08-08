@@ -31,6 +31,7 @@
 #include <System.h>
 
 #include <CLI11.hpp>
+#include <RealTimeTrajectory.h>
 #include <json.h>
 
 using namespace std;
@@ -92,7 +93,7 @@ int main(int argc, char **argv) {
     // SIGTERM unless it is coded to do so.
     // This allows stopping the docker container with ctrl-c
     signal(SIGINT, signal_callback_handler);
-    
+
     // CLI parsing
     CLI::App app{ "GoPro SLAM" };
 
@@ -138,6 +139,12 @@ int main(int argc, char **argv) {
 
     float init_tag_size = 0.16;    // in meters
     app.add_option("--init_tag_size", init_tag_size);
+
+    string target_ip = "127.0.0.1";
+    app.add_option("--target_ip", target_ip);
+
+    int target_port = 0;
+    app.add_option("--target_port", target_port);
 
     // if lost more than max_lost_frames, terminate
     // disable the check if <= 0
@@ -186,6 +193,13 @@ int main(int argc, char **argv) {
         ORB_SLAM3::System::IMU_MONOCULAR,
         enable_gui, load_map, save_map,
         aruco_dict, init_tag_id, init_tag_size);
+
+    std::thread *pRtTraj;
+    RealTimeTrajectory *mpRealTimeTrajectory;
+    if(target_port) {
+        mpRealTimeTrajectory = new RealTimeTrajectory(target_port, target_ip, 30, output_trajectory_tum);
+        pRtTraj              = new std::thread(&RealTimeTrajectory::Run, mpRealTimeTrajectory);
+    }
 
     // Open video file
     cv::VideoCapture cap(input_video, cv::CAP_FFMPEG);
@@ -239,6 +253,10 @@ int main(int argc, char **argv) {
 
         // Pass the image to the SLAM system
         auto result = SLAM.LocalizeMonocular(im_track, tframe, vImuMeas);
+        if(target_port) {
+            RealTimeTrajectory::TcwData data(result.second, result.first);
+            mpRealTimeTrajectory->AddTcw(data);
+        }
 
         // check lost frames
         if(!result.second) {
@@ -263,15 +281,18 @@ int main(int argc, char **argv) {
             std::cout << "ORB-SLAM 3 running at: " << 1. / ttrack << " FPS\n";
         }
     }
+    if(target_port) {
+        mpRealTimeTrajectory->RequestFinish();
+    }
     cout << "finished" << endl;
     // Stop all threads
     SLAM.Shutdown();
 
 
     // Save camera trajectory
-    if(!output_trajectory_tum.empty()) {
-        SLAM.SaveTrajectoryTUM(output_trajectory_tum);
-    }
+    // if(!output_trajectory_tum.empty()) {
+    //     SLAM.SaveTrajectoryTUM(output_trajectory_tum);
+    // }
 
     if(!output_trajectory_csv.empty()) {
         SLAM.SaveTrajectoryCSV(output_trajectory_csv);
