@@ -306,12 +306,15 @@ int main(int argc, char **argv) {
     v_accel_data_sync.clear();
     v_accel_timestamp_sync.clear();
 
+    bool needDepth = false;
+
     while(!SLAM.isShutDown()) {
         std::vector< rs2_vector > vGyro;
         std::vector< double > vGyro_times;
         std::vector< rs2_vector > vAccel;
         std::vector< double > vAccel_times;
-        bool needDepth = mpRealTimeTrajectory->CheckState();
+        if (tPort){
+            needDepth =  mpRealTimeTrajectory->CheckState();}
         rs2::frameset fs;
         {
             std::unique_lock< std::mutex > lk(imu_mutex);
