@@ -25,14 +25,18 @@ void RealTimeTrajectory::Run() {
         unique_lock< mutex > lock(mMutexState);
         mState = STATE::TRACK;
     }
-
+    int localFrameCount = 0;
     while(1) {
         if(!CheckTcw()) {
             usleep(mT / 2);
             continue;
         }
         auto result = GetTcw();
-        SendTcw(result);
+        if(localFrameCount % 2 == 0) {
+            // send every 2 frames
+            SendTcw(result);
+        }
+        localFrameCount++;
         if(CheckFinish()) {
             break;
         }
