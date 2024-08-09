@@ -1155,8 +1155,8 @@ void Tracking::Track() {
         cout << "TRACK: Reset map because local mapper set the bad imu flag " << endl;
         mpSystem->ResetActiveMap();
         {
-            //unique_lock< mutex > lock(mlMutexSave);
-            // logging before return
+            // unique_lock< mutex > lock(mlMutexSave);
+            //  logging before return
             mlRelativeFramePoses.push_back(mlRelativeFramePoses.back());
             mlpReferences.push_back(mlpReferences.back());
             mlFrameTimes.push_back(mlFrameTimes.back());
@@ -1180,8 +1180,8 @@ void Tracking::Track() {
             mlQueueImuData.clear();
             CreateMapInAtlas();
             {
-                //unique_lock< mutex > lock(mlMutexSave);
-                // logging before return
+                // unique_lock< mutex > lock(mlMutexSave);
+                //  logging before return
                 mlRelativeFramePoses.push_back(mlRelativeFramePoses.back());
                 mlpReferences.push_back(mlpReferences.back());
                 mlFrameTimes.push_back(mlFrameTimes.back());
@@ -1209,7 +1209,7 @@ void Tracking::Track() {
 
                 // logging before return
                 {
-                    //unique_lock< mutex > lock(mlMutexSave);
+                    // unique_lock< mutex > lock(mlMutexSave);
                     mlRelativeFramePoses.push_back(mlRelativeFramePoses.back());
                     mlpReferences.push_back(mlpReferences.back());
                     mlFrameTimes.push_back(mlFrameTimes.back());
@@ -1281,7 +1281,7 @@ void Tracking::Track() {
             mLastFrame = Frame(mCurrentFrame);
             // cout<<"Initialization failed! tracking:1533.Still record the frames. mState "<< mState <<endl;
             {
-                //unique_lock< mutex > lock(mlMutexSave);
+                // unique_lock< mutex > lock(mlMutexSave);
                 mlRelativeFramePoses.push_back(mlRelativeFramePoses.back());
                 mlpReferences.push_back(mlpReferences.back());
                 mlFrameTimes.push_back(mlFrameTimes.back());
@@ -1372,7 +1372,7 @@ void Tracking::Track() {
 
                     Verbose::PrintMess("done", Verbose::VERBOSITY_NORMAL);
                     {
-                        //unique_lock< mutex > lock(mlMutexSave);
+                        // unique_lock< mutex > lock(mlMutexSave);
                         mlRelativeFramePoses.push_back(mlRelativeFramePoses.back());
                         mlpReferences.push_back(mlpReferences.back());
                         mlFrameTimes.push_back(mlFrameTimes.back());
@@ -1632,7 +1632,7 @@ void Tracking::Track() {
 
                 // logging before return
                 {
-                    //unique_lock< mutex > lock(mlMutexSave);
+                    // unique_lock< mutex > lock(mlMutexSave);
                     mlRelativeFramePoses.push_back(mlRelativeFramePoses.back());
                     mlpReferences.push_back(mlpReferences.back());
                     mlFrameTimes.push_back(mlFrameTimes.back());
@@ -1646,8 +1646,8 @@ void Tracking::Track() {
                     Verbose::PrintMess("Track lost before IMU initialisation, reseting...", Verbose::VERBOSITY_QUIET);
                     mpSystem->ResetActiveMap();
                     {
-                        //unique_lock< mutex > lock(mlMutexSave);
-                        // logging before return
+                        // unique_lock< mutex > lock(mlMutexSave);
+                        //  logging before return
                         mlRelativeFramePoses.push_back(mlRelativeFramePoses.back());
                         mlpReferences.push_back(mlpReferences.back());
                         mlFrameTimes.push_back(mlFrameTimes.back());
@@ -1659,8 +1659,8 @@ void Tracking::Track() {
 
             CreateMapInAtlas();
             {
-                //unique_lock< mutex > lock(mlMutexSave);
-                // logging before return
+                // unique_lock< mutex > lock(mlMutexSave);
+                //  logging before return
                 mlRelativeFramePoses.push_back(mlRelativeFramePoses.back());
                 mlpReferences.push_back(mlpReferences.back());
                 mlFrameTimes.push_back(mlFrameTimes.back());
@@ -1682,7 +1682,7 @@ void Tracking::Track() {
     if(!is_lost && mCurrentFrame.isSet()) {
         Sophus::SE3f Tcr_ = mCurrentFrame.GetPose() * mCurrentFrame.mpReferenceKF->GetPoseInverse();
         {
-            //unique_lock< mutex > lock(mlMutexSave);
+            // unique_lock< mutex > lock(mlMutexSave);
             mlRelativeFramePoses.push_back(Tcr_);
             mlpReferences.push_back(mCurrentFrame.mpReferenceKF);
             mlFrameTimes.push_back(mCurrentFrame.mTimeStamp);
@@ -1693,7 +1693,7 @@ void Tracking::Track() {
     } else {
         // This can happen if tracking is lost
         {
-            //unique_lock< mutex > lock(mlMutexSave);
+            // unique_lock< mutex > lock(mlMutexSave);
             mlRelativeFramePoses.push_back(mlRelativeFramePoses.back());
             mlpReferences.push_back(mlpReferences.back());
             mlFrameTimes.push_back(mlFrameTimes.back());
@@ -2077,8 +2077,16 @@ void Tracking::CheckReplacedInLastFrame() {
     }
 }
 
-// 目的：当系统处于初始化或跟踪正常状态时，该函数通过将当前帧与参考关键帧进行匹配来估计相机位姿。
-// 它首先执行ORB特征匹配，如果找到足够多的匹配点，则使用PnP求解器来估计相机姿态。
+/**
+ * @brief 跟踪参考关键帧
+ * 
+ * 此函数通过使用当前帧与参考关键帧之间的ORB匹配来更新当前帧的姿态。
+ * 首先，计算当前帧的Bag of Words向量，然后进行ORB匹配。如果找到足够的匹配点，
+ * 则设置PnP求解器并优化姿态。最后，清除异常值，并检查剩余的匹配点数量以确定跟踪是否成功。
+ *
+ * @return true 跟踪成功
+ * @return false 跟踪失败
+ */
 bool Tracking::TrackReferenceKeyFrame() {
     // Compute Bag of Words vector
     mCurrentFrame.ComputeBoW();
@@ -2133,6 +2141,15 @@ bool Tracking::TrackReferenceKeyFrame() {
         return nmatchesMap >= 10;
 }
 
+/**
+ * @brief 更新上一帧的位姿并根据需要创建地图点
+ * 
+ * 此函数首先更新上一帧相对于参考关键帧的位姿。如果当前跟踪模式不涉及关键帧更新或传感器为单目或仅进行跟踪，
+ * 则直接返回。对于双目或RGB-D传感器，函数将基于深度信息创建“视觉里程计”地图点。
+ * 地图点按照深度排序，并优先插入深度较小的点，直到达到预设条件。
+ * 
+ * @param void 无输入参数
+ */
 void Tracking::UpdateLastFrame() {
     // Update pose according to reference keyframe
     KeyFrame *pRef   = mLastFrame.mpReferenceKF;
@@ -2197,7 +2214,17 @@ void Tracking::UpdateLastFrame() {
     }
 }
 
-// 利用运动模型预测当前帧的相机位姿。如果系统正在使用IMU信息，则会利用IMU预积分数据预测状态；否则，基于上一帧到当前帧之间的运动预测相机位姿。
+/**
+ * @brief 使用运动模型进行跟踪
+ * 
+ * 该函数尝试使用上一帧和当前帧之间的运动模型预测并更新当前帧的姿态。
+ * 如果IMU初始化并且不需要重置，则使用IMU预测状态。否则，使用上一帧的速度更新当前姿态。
+ * 接着，通过投影上一帧的点到当前帧来搜索匹配点，并优化姿态。
+ * 最后，检查匹配点的数量以确定跟踪是否成功。
+ * 
+ * @return true 跟踪成功
+ * @return false 跟踪失败
+ */
 bool Tracking::TrackWithMotionModel() {
     ORBmatcher matcher(0.9, true);
 
