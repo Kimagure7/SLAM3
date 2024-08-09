@@ -244,7 +244,7 @@ protected:
 
     //ORB
     ORBextractor* mpORBextractorLeft, *mpORBextractorRight;
-    ORBextractor* mpIniORBextractor;
+    ORBextractor* mpIniORBextractor;// 提取的特征点会更多 用于初始化
 
     //BoW
     ORBVocabulary* mpORBVocabulary;

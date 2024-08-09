@@ -810,7 +810,15 @@ void Optimizer::FullInertialBA(Map *pMap, int its, const bool bFixLocal, const l
     pMap->IncreaseChangeIndex();
 }
 
-
+/**
+ * @brief 优化相机姿态
+ * 
+ * 该函数使用g2o库进行基于关键帧的相机姿态优化。它通过构建一个图优化问题，其中包含相机的顶点和从关键帧到地图点的边，
+ * 并使用Levenberg-Marquardt算法求解。优化过程中会动态调整鲁棒核函数的参数以剔除潜在的离群点。
+ * 
+ * @param pFrame 关键帧指针，包含观测数据和当前估计的相机位姿。
+ * @return int 返回初始对应关系的数量减去被标记为离群点的数量，即最终确定的有效对应关系数量。
+ */
 int Optimizer::PoseOptimization(Frame *pFrame)
 {
     g2o::SparseOptimizer optimizer;
@@ -1113,6 +1121,21 @@ int Optimizer::PoseOptimization(Frame *pFrame)
     return nInitialCorrespondences-nBad;
 }
 
+/**
+ * @brief 本地束调整优化，用于局部地图的优化
+ * 
+ * 该函数执行局部地图的束调整优化，通过最小化重投影误差来优化关键帧和地图点的位置。
+ * 它首先确定当前关键帧的邻近关键帧和观察到的地图点，然后设置固定的关键帧，
+ * 并将这些信息传递给g2o库进行非线性最小化。最后，它更新优化后的位置。
+ *
+ * @param pKF 当前的关键帧
+ * @param pbStopFlag 停止标志指针，如果为真，则停止优化
+ * @param pMap 当前的地图
+ * @param num_fixedKF 输出参数：固定的键值框架数量
+ * @param num_OptKF 输出参数：被优化的键值框架数量
+ * @param num_MPs 输出参数：地图点的数量
+ * @param num_edges 输出参数：边的数量（观测）
+ */
 void Optimizer::LocalBundleAdjustment(KeyFrame *pKF, bool* pbStopFlag, Map* pMap, int& num_fixedKF, int& num_OptKF, int& num_MPs, int& num_edges)
 {
     // Local KeyFrames: First Breath Search from Current Keyframe

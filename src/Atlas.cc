@@ -25,16 +25,27 @@
 
 namespace ORB_SLAM3 {
 
+/**
+ * @brief 构造一个Atlas对象
+ */
 Atlas::Atlas() {
     mpCurrentMap = static_cast< Map * >(NULL);
 }
 
+/**
+ * @brief 构造一个带有初始关键帧ID的Atlas对象
+ * @param initKFid 初始关键帧ID
+ */
 Atlas::Atlas(int initKFid)
     : mnLastInitKFidMap(initKFid), mHasViewer(false) {
     mpCurrentMap = static_cast< Map * >(NULL);
     CreateNewMap();
 }
 
+
+/**
+ * @brief 析构函数，释放所有地图资源
+ */
 Atlas::~Atlas() {
     for(std::set< Map * >::iterator it = mspMaps.begin(), end = mspMaps.end(); it != end;) {
         Map *pMi = *it;
@@ -49,6 +60,9 @@ Atlas::~Atlas() {
     }
 }
 
+/**
+ * @brief 创建一个新的地图实例，并设置为当前地图
+ */
 void Atlas::CreateNewMap() {
     unique_lock< mutex > lock(mMutexAtlas);
     cout << "Creation of new map with id: " << Map::nNextId << endl;
@@ -69,6 +83,10 @@ void Atlas::CreateNewMap() {
     mspMaps.insert(mpCurrentMap);
 }
 
+/**
+ * @brief 更改当前地图为指定的地图实例
+ * @param pNewMp 新的地图实例指针
+ */
 void Atlas::ChangeMap(Map *pMap) {
     unique_lock< mutex > lock(mMutexAtlas);
     cout << "Change to map with id: " << pMap->GetId() << endl;
@@ -178,6 +196,14 @@ std::vector< MapPoint * > Atlas::GetReferenceMapPoints() {
     return mpCurrentMap->GetReferenceMapPoints();
 }
 
+/**
+ * @brief 获取所有地图的指针列表，按地图ID排序
+ * 
+ * 此函数在互斥锁保护下获取当前地图集中的所有地图实例的指针，并将其存储在一个向量中。
+ * 向量中的地图按照其ID进行排序，以确保每次调用时返回的地图顺序一致。
+ * 
+ * @return vector<Map*> 包含所有地图实例指针的向量，按ID排序
+ */
 vector< Map * > Atlas::GetAllMaps() {
     unique_lock< mutex > lock(mMutexAtlas);
     struct compFunctor {
@@ -258,6 +284,13 @@ bool Atlas::isImuInitialized() {
     return mpCurrentMap->isImuInitialized();
 }
 
+/**
+ * @brief Atlas::PreSave 在保存地图前的预处理函数，用于更新关键帧ID并备份当前地图信息。
+ * 
+ * 该函数首先更新初始化关键帧ID，确保它总是当前最大关键帧ID的下一个。然后，它复制所有地图到备份向量中，
+ * 并按照地图的ID进行排序。接着，对于每个非空且有效的地图，如果该地图没有关键帧，则标记为坏图并跳过；
+ * 否则，调用该地图的PreSave方法来进一步准备保存工作。
+ */
 void Atlas::PreSave() {
     if(mpCurrentMap) {
         if(!mspMaps.empty() && mnLastInitKFidMap < mpCurrentMap->GetMaxKFid())
@@ -287,6 +320,12 @@ void Atlas::PreSave() {
     RemoveBadMaps();
 }
 
+/**
+ * @brief Atlas::PostLoad 负载后处理函数，用于恢复和整合所有地图数据。
+ *
+ * 该函数首先创建一个相机映射以方便查找相机。然后清空当前的地图集合，并遍历所有备份的地图，
+ * 将它们插入到当前的地图集合中，并调用每个地图的PostLoad方法来恢复数据。同时计算总的关键帧和特征点数量。
+ */
 void Atlas::PostLoad() {
     map< unsigned int, GeometricCamera * > mpCams;
     for(GeometricCamera *pCam : mvpCameras) {
@@ -319,7 +358,12 @@ void Atlas::SetORBVocabulary(ORBVocabulary *pORBVoc) {
 ORBVocabulary *Atlas::GetORBVocabulary() {
     return mpORBVocabulary;
 }
-
+/**
+ * @brief Atlas::GetNumLivedKF 计算并返回当前所有地图中的活动关键帧数量。
+ *
+ * 该函数首先锁定Atlas的互斥锁以确保线程安全。然后，遍历所有地图，累加每个地图的关键帧数量，
+ * 最后返回总的关键帧数量。
+ */
 long unsigned int Atlas::GetNumLivedKF() {
     unique_lock< mutex > lock(mMutexAtlas);
     long unsigned int num = 0;
@@ -330,6 +374,12 @@ long unsigned int Atlas::GetNumLivedKF() {
     return num;
 }
 
+/**
+ * @brief Atlas::GetNumLivedMP 计算并返回当前所有地图中的活动特征点数量。
+ *
+ * 与GetNumLivedKF类似，该函数也首先锁定Atlas的互斥锁以确保线程安全。然后，遍历所有地图，
+ * 累加每个地图的特征点数量，并返回总的特征点数量。
+ */
 long unsigned int Atlas::GetNumLivedMP() {
     unique_lock< mutex > lock(mMutexAtlas);
     long unsigned int num = 0;
@@ -340,6 +390,13 @@ long unsigned int Atlas::GetNumLivedMP() {
     return num;
 }
 
+
+/**
+ * @brief Atlas::GetAtlasKeyframes 返回一个包含所有关键帧的地图（字典），键为关键帧ID，值为关键帧指针。
+ *
+ * 遍历备份的所有地图集合mvpBackupMaps，获取每个地图的所有关键帧，并将它们存储在mpIdKFs中，
+ * 其中键是关键帧的ID（mnId），值是对应的关键帧指针。最后返回这个包含所有关键帧的地图。
+ */
 map< long unsigned int, KeyFrame * > Atlas::GetAtlasKeyframes() {
     map< long unsigned int, KeyFrame * > mpIdKFs;
     for(Map *pMap_i : mvpBackupMaps) {

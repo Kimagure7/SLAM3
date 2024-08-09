@@ -74,7 +74,6 @@ public:
     // Extract ORB on the image. 0 for left image and 1 for right image.
     void ExtractORB(int flag, const cv::Mat &im, const int x0, const int x1);
 
-    // Compute Bag of Words representation.
     void ComputeBoW();
 
     // Set the camera pose. (Imu pose is not modified!)
@@ -85,7 +84,7 @@ public:
 
     Eigen::Vector3f GetVelocity() const;
 
-    // Set IMU pose and velocity (implicitly changes camera pose)
+    
     void SetImuPoseVelocity(const Eigen::Matrix3f &Rwb, const Eigen::Vector3f &twb, const Eigen::Vector3f &Vwb);
 
     Eigen::Matrix<float,3,1> GetImuPosition() const;

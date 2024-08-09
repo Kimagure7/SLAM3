@@ -955,7 +955,20 @@ Sophus::SE3f Tracking::GrabImageRGBD(const cv::Mat &imRGB, const cv::Mat &imD, c
     return mCurrentFrame.GetPose();
 }
 
-
+/**
+ * @brief 抓取单目图像并进行视觉跟踪
+ *
+ * 此函数接收一个OpenCV图像矩阵、时间戳和文件名作为输入，首先将图像转换为灰度图（如果输入的是彩色图像），
+ * 然后根据系统的传感器类型（单目或IMU单目）创建帧对象。该帧被用于初始化或进行后续的跟踪过程。
+ * 如果系统状态是未初始化、没有接收过任何图像，或者从初始化到当前接收到的帧数少于最大允许帧数，
+ * 则使用初始ORB特征提取器；否则使用主ORB特征提取器。最后，该函数执行跟踪，并返回当前帧的姿态。
+ *
+ * @param im 输入的OpenCV图像矩阵
+ * @param timestamp 图像的时间戳
+ * @param filename 图像文件名
+ *
+ * @return Sophus::SE3f 当前帧的姿态表示为Sophus库中的SE3浮点型对象
+ */
 Sophus::SE3f Tracking::GrabImageMonocular(const cv::Mat &im, const double &timestamp, string filename) {
     mImGray = im;
     if(mImGray.channels() == 3) {
@@ -1003,6 +1016,17 @@ void Tracking::GrabImuData(const IMU::Point &imuMeasurement) {
     mlQueueImuData.push_back(imuMeasurement);
 }
 
+/**
+ * @brief 预积分IMU数据以更新当前帧的IMU状态
+ *
+ * 该函数负责从IMU队列中提取并处理自上一帧以来的所有IMU测量数据，预积分这些测量值以估计当前帧相对于上一帧的运动。
+ * 它首先检查是否有前一帧的存在以及IMU队列是否非空。然后，它将收集所有相关的IMU点，并使用这些点来创建一个预积分对象，
+ * 这个对象会根据加速度和角速度以及时间步长来更新其内部状态。最后，函数将更新后的预积分信息存储在当前帧中。
+ *
+ * @details
+ * - 如果没有前一帧或IMU队列为空，则直接标记当前帧为已集成并返回。
+ * - 从IMU队列中取出所有与当前和前一帧时间戳相关的测量数据，并进行预积分计算。
+ */
 void Tracking::PreintegrateIMU() {
 
     if(!mCurrentFrame.mpPrevFrame) {
@@ -1092,7 +1116,16 @@ void Tracking::PreintegrateIMU() {
     // Verbose::PrintMess("Preintegration is finished!! ", Verbose::VERBOSITY_DEBUG);
 }
 
-
+/**
+ * @brief 预测基于IMU的系统状态
+ *
+ * 此函数尝试预测系统的当前状态（位置、旋转和速度）基于最近的预积分结果和可能的关键帧信息。
+ * 如果存在一个最近的关键帧并且地图已经更新，则使用关键帧的数据和预积分结果来预测新的姿态；否则，
+ * 如果地图尚未更新，则使用上一帧的信息来进行预测。如果既没有关键帧也没有上一帧可用，或者地图没有更新，
+ * 则返回false表示无法进行有效的预测。
+ *
+ * @return bool 成功预测则返回true，否则返回false
+ */
 bool Tracking::PredictStateIMU() {
     if(!mCurrentFrame.mpPrevFrame) {
         Verbose::PrintMess("No last frame", Verbose::VERBOSITY_NORMAL);
@@ -2064,6 +2097,13 @@ void Tracking::CreateMapInAtlas() {
     mbCreatedMap = true;
 }
 
+/**
+ * @brief 检查并替换上一帧中的地图点
+ *
+ * 该函数遍历上一帧中所有被观测到的地图点，检查它们是否已经被新的地图点所替代。
+ * 如果某个地图点有替代者（即被标记为已删除并由另一个地图点取代），则在上一帧的特征列表中用新的地图点替换原地图点。
+ * 这对于确保系统内部数据结构的一致性和准确性至关重要，尤其是在处理动态环境或进行局部映射更新时。
+ */
 void Tracking::CheckReplacedInLastFrame() {
     for(int i = 0; i < mLastFrame.N; i++) {
         MapPoint *pMP = mLastFrame.mvpMapPoints[i];
@@ -2079,7 +2119,7 @@ void Tracking::CheckReplacedInLastFrame() {
 
 /**
  * @brief 跟踪参考关键帧
- * 
+ *
  * 此函数通过使用当前帧与参考关键帧之间的ORB匹配来更新当前帧的姿态。
  * 首先，计算当前帧的Bag of Words向量，然后进行ORB匹配。如果找到足够的匹配点，
  * 则设置PnP求解器并优化姿态。最后，清除异常值，并检查剩余的匹配点数量以确定跟踪是否成功。
@@ -2143,11 +2183,11 @@ bool Tracking::TrackReferenceKeyFrame() {
 
 /**
  * @brief 更新上一帧的位姿并根据需要创建地图点
- * 
+ *
  * 此函数首先更新上一帧相对于参考关键帧的位姿。如果当前跟踪模式不涉及关键帧更新或传感器为单目或仅进行跟踪，
  * 则直接返回。对于双目或RGB-D传感器，函数将基于深度信息创建“视觉里程计”地图点。
  * 地图点按照深度排序，并优先插入深度较小的点，直到达到预设条件。
- * 
+ *
  * @param void 无输入参数
  */
 void Tracking::UpdateLastFrame() {
@@ -2216,12 +2256,12 @@ void Tracking::UpdateLastFrame() {
 
 /**
  * @brief 使用运动模型进行跟踪
- * 
+ *
  * 该函数尝试使用上一帧和当前帧之间的运动模型预测并更新当前帧的姿态。
- * 如果IMU初始化并且不需要重置，则使用IMU预测状态。否则，使用上一帧的速度更新当前姿态。
+ * 如果IMU初始化并且不需要重置，则使用IMU预测状态。否则，使用上一帧的速度更新当前姿态，
  * 接着，通过投影上一帧的点到当前帧来搜索匹配点，并优化姿态。
  * 最后，检查匹配点的数量以确定跟踪是否成功。
- * 
+ *
  * @return true 跟踪成功
  * @return false 跟踪失败
  */
@@ -2237,6 +2277,7 @@ bool Tracking::TrackWithMotionModel() {
         PredictStateIMU();
         return true;
     } else {
+        cout << "TrackWithMotionModel: (mCurrentFrame.mnId > mnLastRelocFrameId + mnFramesToResetIMU " << mCurrentFrame.mnId << " > " << mnLastRelocFrameId + mnFramesToResetIMU << endl;
         mCurrentFrame.SetPose(mVelocity * mLastFrame.GetPose());
     }
 
@@ -2307,7 +2348,14 @@ bool Tracking::TrackWithMotionModel() {
         return nmatchesMap >= 10;
 }
 
-// 一旦有了初步的相机姿态估计（无论是通过参考关键帧还是运动模型），该函数会更新局部地图，并尝试在局部地图中寻找更多匹配点以优化当前帧的姿态。
+/**
+ * @brief TrackLocalMap - 跟踪局部地图
+ *
+ * 此函数尝试在局部地图中找到与当前帧匹配的特征点，优化相机姿态，并更新地图点统计信息。
+ * 根据匹配的内点数量和系统传感器类型（单目、立体或RGB-D），决定跟踪是否成功。
+ *
+ * @return bool - 如果跟踪成功返回true，否则返回false
+ */
 bool Tracking::TrackLocalMap() {
 
     // We have an estimation of the camera pose and some map points tracked in the frame.
@@ -2411,6 +2459,14 @@ bool Tracking::TrackLocalMap() {
     }
 }
 
+/**
+ * @brief NeedNewKeyFrame - 判断是否需要创建新的关键帧
+ *
+ * 该函数根据当前跟踪状态、传感器类型、地图点追踪情况以及局部映射的状态来决定是否应该插入新的关键帧。
+ * 关键帧的创建条件包括时间间隔、与参考关键帧的匹配度、局部映射的空闲状态等。
+ *
+ * @return bool - 如果满足创建新关键帧的条件，返回true；否则返回false
+ */
 bool Tracking::NeedNewKeyFrame() {
     if((mSensor == System::IMU_MONOCULAR || mSensor == System::IMU_STEREO || mSensor == System::IMU_RGBD) && !mpAtlas->GetCurrentMap()->isImuInitialized()) {
         if(mSensor == System::IMU_MONOCULAR && (mCurrentFrame.mTimeStamp - mpLastKeyFrame->mTimeStamp) >= 0.25)
@@ -2544,6 +2600,13 @@ bool Tracking::NeedNewKeyFrame() {
         return false;
 }
 
+/**
+ * @brief CreateNewKeyFrame - 创建新的关键帧
+ *
+ * 当确定需要创建新的关键帧时，此函数将负责生成并初始化一个新的关键帧对象，
+ * 更新参考关键帧，并处理与IMU传感器相关的预积分过程。此外，对于非单目传感器，
+ * 它还将基于当前深度图信息创建或更新MapPoints。
+ */
 void Tracking::CreateNewKeyFrame() {
     if(mpLocalMapper->IsInitializing() && !mpAtlas->isImuInitialized())
         return;
@@ -2657,6 +2720,7 @@ void Tracking::CreateNewKeyFrame() {
     mpLastKeyFrame   = pKF;
 }
 
+
 void Tracking::SearchLocalPoints() {
     // Do not search map points already matched
     for(vector< MapPoint * >::iterator vit = mCurrentFrame.mvpMapPoints.begin(), vend = mCurrentFrame.mvpMapPoints.end(); vit != vend; vit++) {
@@ -2727,6 +2791,12 @@ void Tracking::UpdateLocalMap() {
     UpdateLocalPoints();
 }
 
+/**
+ * @brief UpdateLocalPoints - 更新局部地图中的地图点
+ *
+ * 此函数负责更新局部地图中包含的地图点列表。它遍历所有局部关键帧，收集其中观察到的地图点，
+ * 并确保每个地图点只被当前帧引用一次。这有助于保持局部地图的更新和一致性。
+ */
 void Tracking::UpdateLocalPoints() {
     mvpLocalMapPoints.clear();
 
@@ -3083,6 +3153,15 @@ void Tracking::Reset(bool bLocMap) {
     Verbose::PrintMess("   End reseting! ", Verbose::VERBOSITY_NORMAL);
 }
 
+/**
+ * @brief ResetActiveMap - 重置活动地图
+ *
+ * 此函数用于重置当前追踪器所使用的活动地图，这通常在系统初始化或遇到重大错误后调用。
+ * 它会停止并重置所有相关模块（如局部映射器、闭环检测器），清除数据库和地图内容，
+ * 并将追踪器的状态恢复到初始状态，准备重新开始处理图像帧。
+ *
+ * @param bLocMap 如果为true，则仅针对局部映射器进行重置；如果为false，则进行全面的重置。
+ */
 void Tracking::ResetActiveMap(bool bLocMap) {
     Verbose::PrintMess("Active map Reseting", Verbose::VERBOSITY_NORMAL);
     if(mpViewer) {

@@ -214,7 +214,16 @@ bool Map::IsBad() {
     return mbBad;
 }
 
-
+/**
+ * @brief 应用缩放旋转变换到地图上，包括所有关键帧和地图点的位置。
+ * 
+ * 此函数将一个给定的SE3变换（表示为T）和一个缩放因子s应用到地图上的所有关键帧和地图点，
+ * 以更新它们的位置。对于关键帧，如果bScaledVel为true，则其速度也会根据缩放因子进行调整。
+ * 
+ * @param T 要应用的SE3变换。
+ * @param s 缩放因子。
+ * @param bScaledVel 是否按比例调整关键帧的速度，默认为false。
+ */
 void Map::ApplyScaledRotation(const Sophus::SE3f &T, const float s, const bool bScaledVel) {
     unique_lock< mutex > lock(mMutexMap);
 
@@ -306,6 +315,14 @@ void Map::SetLastMapChange(int currentChangeId) {
     mnMapChangeNotified = currentChangeId;
 }
 
+/**
+ * @brief 在保存地图之前进行预处理，包括清理无效的观测和备份关键信息。
+ * 
+ * 此函数用于在保存地图数据前进行必要的预处理。它首先移除所有没有观测值的地图点，
+ * 然后备份所有的关键帧和地图点的原始信息，包括关键帧的起源ID以及地图点和关键帧之间的观测关系。
+ * 
+ * @param spCams 一个引用到相机集合的参数，用于后续的关键帧保存操作。
+ */
 void Map::PreSave(std::set< GeometricCamera * > &spCams) {
     int nMPWithoutObs = 0;
 
@@ -370,6 +387,15 @@ void Map::PreSave(std::set< GeometricCamera * > &spCams) {
     }
 }
 
+/**
+ * @brief 在加载地图之后进行后处理，恢复先前备份的信息并重建实例间的引用。
+ *
+ * 此函数在加载完地图数据后调用，用于恢复之前在PreSave()中备份的信息。它首先将备份的地图点和关键帧重新插入到各自的数据结构中，
+ * 然后更新每个实例对所属地图的引用，并重建不同实例间（如MapPoint与KeyFrame）的关系。最后，它还会更新关键帧数据库并重建关键帧起源列表。
+ *
+ * @param pKFDB 关键帧数据库指针，用于更新数据库中的关键帧信息。
+ * @param pORBVoc ORB词汇表指针，用于设置给每个KeyFrame对象使用相同的ORB特征描述符词汇表。
+ */
 void Map::PostLoad(KeyFrameDatabase *pKFDB, ORBVocabulary *pORBVoc /*, map<long unsigned int, KeyFrame*>& mpKeyFrameId*/, map< unsigned int, GeometricCamera * > &mpCams) {
     std::copy(mvpBackupMapPoints.begin(), mvpBackupMapPoints.end(), std::inserter(mspMapPoints, mspMapPoints.begin()));
     std::copy(mvpBackupKeyFrames.begin(), mvpBackupKeyFrames.end(), std::inserter(mspKeyFrames, mspKeyFrames.begin()));

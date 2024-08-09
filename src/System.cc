@@ -1533,6 +1533,17 @@ void System::SaveAtlas(int type,const string &atlasFilePath,const string &orbFil
 	}
 }
 
+/**
+ * @brief System::LoadAtlas 加载地图数据到系统中，支持文本或二进制文件格式。
+ *
+ * @param type 文件类型，可以是TEXT_FILE（文本文件）或BINARY_FILE（二进制文件）。
+ *
+ * @return 如果成功加载地图，则返回true；否则返回false。
+ *
+ * 该函数根据指定的文件类型读取地图数据。首先检查给定的路径是否有效，然后使用Boost库中的归档功能来读取和解析数据。
+ * 读取过程中会提取词汇表文件名、词汇表校验和以及地图对象(mpAtlas)。之后，函数会验证所加载的词汇表是否与当前系统中使用的相匹配，
+ * 通过比较它们的校验和来实现。如果匹配，则设置地图的关键帧数据库、ORB词汇表，并调用PostLoad方法完成加载过程。最后返回操作结果。
+ */
 bool System::LoadAtlas(int type) {
 	string strFileVoc, strVocChecksum;
 	bool isRead = false;

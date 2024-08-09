@@ -391,6 +391,17 @@ Eigen::Vector3f Frame::GetVelocity() const {
     return mVw;
 }
 
+/**
+ * @brief 设置帧的IMU位置、旋转和速度
+ *
+ * 该函数接收IMU测量得到的位置、旋转和速度信息，更新帧的内部表示以反映这些新的状态。
+ * 它首先将接收到的旋转和平移信息封装到一个Sophus::SE3f对象中，然后计算相机在世界坐标系下的变换，
+ * 并通过调用UpdatePoseMatrices()来更新所有相关的姿态矩阵。同时，它标记帧为已设置其IMU状态和姿势。
+ *
+ * @param Rwb 世界坐标系下的IMU旋转（Eigen::Matrix3f）
+ * @param twb 世界坐标系下的IMU平移（Eigen::Vector3f）
+ * @param Vwb IMU的速度（Eigen::Vector3f）
+ */
 void Frame::SetImuPoseVelocity(const Eigen::Matrix3f &Rwb, const Eigen::Vector3f &twb, const Eigen::Vector3f &Vwb) {
     mVw           = Vwb;
     mbHasVelocity = true;
@@ -405,6 +416,13 @@ void Frame::SetImuPoseVelocity(const Eigen::Matrix3f &Rwb, const Eigen::Vector3f
     mbHasPose = true;
 }
 
+/**
+ * @brief 更新帧的姿态矩阵
+ *
+ * 此函数负责根据当前帧在世界坐标系中的变换来更新所有相关的位置和方向矩阵。
+ * 这些矩阵包括从相机到世界的方向矩阵mRwc，从世界到相机的平移向量mOw，
+ * 以及从相机到世界的平移向量mtcw和方向矩阵mRcw。这些更新后的矩阵对于后续处理如特征匹配或地图点投影至关重要。
+ */
 void Frame::UpdatePoseMatrices() {
     Sophus::SE3< float > Twc = mTcw.inverse();
     mRwc                     = Twc.rotationMatrix();
@@ -651,7 +669,14 @@ bool Frame::PosInGrid(const cv::KeyPoint &kp, int &posX, int &posY) {
     return true;
 }
 
-
+/**
+ * @brief 计算当前帧的Bag of Words (BoW)表示。
+ *
+ * 此函数用于将帧中的ORB描述符转换为其在视觉词典中的BoW表示形式。如果尚未计算过BoW向量，
+ * 则使用提供的ORB词汇树进行转换，并同时计算特征向量，这有助于后续的匹配过程。
+ *
+ * @note 此函数会检查mBowVec是否为空，以避免重复计算。
+ */
 void Frame::ComputeBoW() {
     if(mBowVec.empty()) {
         vector< cv::Mat > vCurrentDesc = Converter::toDescriptorVector(mDescriptors);
