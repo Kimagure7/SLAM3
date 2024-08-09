@@ -295,7 +295,7 @@ int main(int argc, char **argv) {
     std::thread *pRtTraj;
     RealTimeTrajectory *mpRealTimeTrajectory;
     if(tPort) {
-        mpRealTimeTrajectory = new RealTimeTrajectory(setting,tPort, tIP,cPort,cIP,30, output_trajectory_csv);
+        mpRealTimeTrajectory = new RealTimeTrajectory(setting, tPort, tIP, cPort, cIP, 30, output_trajectory_csv);
         pRtTraj              = new std::thread(&RealTimeTrajectory::Run, mpRealTimeTrajectory);
     }
 
@@ -307,14 +307,17 @@ int main(int argc, char **argv) {
     v_accel_timestamp_sync.clear();
 
     bool needDepth = false;
+    bool needImage = false;
 
     while(!SLAM.isShutDown()) {
         std::vector< rs2_vector > vGyro;
         std::vector< double > vGyro_times;
         std::vector< rs2_vector > vAccel;
         std::vector< double > vAccel_times;
-        if (tPort){
-            needDepth =  mpRealTimeTrajectory->CheckState();}
+        if(tPort) {
+            // needDepth =  mpRealTimeTrajectory->CheckState();}
+            needImage = mpRealTimeTrajectory->CheckState();
+        }
         rs2::frameset fs;
         {
             std::unique_lock< std::mutex > lk(imu_mutex);
@@ -394,7 +397,11 @@ int main(int argc, char **argv) {
             if(needDepth) {
                 RealTimeTrajectory::TcwData data(result.second, result.first, im, depth);
                 mpRealTimeTrajectory->AddTcw(data);
-            } else {
+            } else if(needImage) {
+                RealTimeTrajectory::TcwData data(result.second, result.first, im, cv::Mat());
+                mpRealTimeTrajectory->AddTcw(data);
+            }
+            {
                 RealTimeTrajectory::TcwData data(result.second, result.first);
                 mpRealTimeTrajectory->AddTcw(data);
             }

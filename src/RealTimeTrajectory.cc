@@ -88,7 +88,7 @@ void RealTimeTrajectory::RunCalibration() {
             break;
         }
         if(result.isOK) {
-            if(result.img.empty() || result.depth.empty()) {
+            if(result.img.empty()) {    // || result.depth.empty()) {
                 // still waiting for image data
                 continue;
             }
@@ -180,8 +180,8 @@ bool RealTimeTrajectory::SendTcw(TcwData data) {
         j["q_w"]             = q.w();
         j["frame_count"]     = frameCount;
         if(mState == STATE::CALIB) {
-            j["img"]   = Mat2Base64(data.img, ".jpg");
-            j["depth"] = Mat2Base64(data.depth, ".png");
+            j["img"] = Mat2Base64(data.img, ".jpg");
+            // j["depth"] = Mat2Base64(data.depth, ".png");
         }
     } else {
         j["is_lost"]     = 1;
