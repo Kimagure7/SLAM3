@@ -671,20 +671,25 @@ void KeyFrameDatabase::DetectNBestCandidates(KeyFrame *pKF, vector< KeyFrame * >
 vector< KeyFrame * > KeyFrameDatabase::DetectRelocalizationCandidates(Frame *F, Map *pMap) {
     list< KeyFrame * > lKFsSharingWords;
 
-    // Search all keyframes that share a word with current frame
+    // Step1: Search all keyframes that share a word with current frame
     {
         unique_lock< mutex > lock(mMutex);
-
+        // iterate through all words in the current frame
         for(DBoW2::BowVector::const_iterator vit = F->mBowVec.begin(), vend = F->mBowVec.end(); vit != vend; vit++) {
+            // lKFs 包含了第vit->first个单词的所有KeyFrames
+            // mvInvertedFile是一个vector<list<KeyFram*>> ，存储了一个单词对应的所有KeyFrames
             list< KeyFrame * > &lKFs = mvInvertedFile[vit->first];
 
             for(list< KeyFrame * >::iterator lit = lKFs.begin(), lend = lKFs.end(); lit != lend; lit++) {
                 KeyFrame *pKFi = *lit;
+                // 如果pKFi还没有被标记 则初始化一些重定位用的属性
+                // 注意 两帧之间可能有多个共享单词 可能之前就标记过了
                 if(pKFi->mnRelocQuery != F->mnId) {
                     pKFi->mnRelocWords = 0;
                     pKFi->mnRelocQuery = F->mnId;
                     lKFsSharingWords.push_back(pKFi);
                 }
+                // 该帧与当前帧共享的单词数目
                 pKFi->mnRelocWords++;
             }
         }
@@ -692,20 +697,21 @@ vector< KeyFrame * > KeyFrameDatabase::DetectRelocalizationCandidates(Frame *F, 
     if(lKFsSharingWords.empty())
         return vector< KeyFrame * >();
 
-    // Only compare against those keyframes that share enough words
+    // Step2: Only compare against those keyframes that share enough words
     int maxCommonWords = 0;
     for(list< KeyFrame * >::iterator lit = lKFsSharingWords.begin(), lend = lKFsSharingWords.end(); lit != lend; lit++) {
         if((*lit)->mnRelocWords > maxCommonWords)
             maxCommonWords = (*lit)->mnRelocWords;
     }
-
-    int minCommonWords = maxCommonWords * 0.8f;
+    // 原装阈值是0.8 这里适当调低以增强relocalization的鲁棒性
+    int minCommonWords = maxCommonWords * 0.6f;
 
     list< pair< float, KeyFrame * > > lScoreAndMatch;
 
     int nscores = 0;
 
     // Compute similarity score.
+    // 有共同词汇的关键帧只有高过一定词汇阈值才有分数
     for(list< KeyFrame * >::iterator lit = lKFsSharingWords.begin(), lend = lKFsSharingWords.end(); lit != lend; lit++) {
         KeyFrame *pKFi = *lit;
 
@@ -723,20 +729,22 @@ vector< KeyFrame * > KeyFrameDatabase::DetectRelocalizationCandidates(Frame *F, 
     list< pair< float, KeyFrame * > > lAccScoreAndMatch;
     float bestAccScore = 0;
 
-    // Lets now accumulate score by covisibility
+    // Step3: 将与关键帧相连（权值最高）的前十个关键帧归为一组，计算累计得分
+    // 从有分数的帧出发找10个共视 这里面只要有共同词汇的帧 然后计算累计分数
+    // 每一组找一个最高分的帧
     for(list< pair< float, KeyFrame * > >::iterator it = lScoreAndMatch.begin(), itend = lScoreAndMatch.end(); it != itend; it++) {
         KeyFrame *pKFi                = it->second;
-        vector< KeyFrame * > vpNeighs = pKFi->GetBestCovisibilityKeyFrames(10);
+        vector< KeyFrame * > vpNeighs = pKFi->GetBestCovisibilityKeyFrames(10);    // 每个有共同词汇的关键帧基础上再找10个共视最多的的关键帧
 
         float bestScore   = it->first;
         float accScore    = bestScore;
         KeyFrame *pBestKF = pKFi;
         for(vector< KeyFrame * >::iterator vit = vpNeighs.begin(), vend = vpNeighs.end(); vit != vend; vit++) {
             KeyFrame *pKF2 = *vit;
-            if(pKF2->mnRelocQuery != F->mnId)
+            if(pKF2->mnRelocQuery != F->mnId) // 这个新招的关键帧也得是与当前帧有共同词汇
                 continue;
 
-            accScore += pKF2->mRelocScore;
+            accScore += pKF2->mRelocScore; // 也就是说在这个新的关键帧还得有分数 不然0相当于跳过了
             if(pKF2->mRelocScore > bestScore) {
                 pBestKF   = pKF2;
                 bestScore = pKF2->mRelocScore;
@@ -748,7 +756,8 @@ vector< KeyFrame * > KeyFrameDatabase::DetectRelocalizationCandidates(Frame *F, 
     }
 
     // Return all those keyframes with a score higher than 0.75*bestScore
-    float minScoreToRetain = 0.75f * bestAccScore;
+    // 修改到0.65以尝试增强鲁棒性
+    float minScoreToRetain = 0.65f * bestAccScore;
     set< KeyFrame * > spAlreadyAddedKF;
     vector< KeyFrame * > vpRelocCandidates;
     vpRelocCandidates.reserve(lAccScoreAndMatch.size());
