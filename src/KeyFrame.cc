@@ -204,6 +204,7 @@ void KeyFrame::UpdateBestCovisibles() {
 	mvOrderedWeights             = vector< int >(lWs.begin(), lWs.end());
 }
 
+// 返回与当前关键帧相连的所有关键帧集合
 set< KeyFrame * > KeyFrame::GetConnectedKeyFrames() {
 	unique_lock< mutex > lock(mMutexConnections);
 	set< KeyFrame * > s;
@@ -212,11 +213,13 @@ set< KeyFrame * > KeyFrame::GetConnectedKeyFrames() {
 	return s;
 }
 
+// 返回与当前关键帧按共视程度排序的关键帧向
 vector< KeyFrame * > KeyFrame::GetVectorCovisibleKeyFrames() {
 	unique_lock< mutex > lock(mMutexConnections);
 	return mvpOrderedConnectedKeyFrames;
 }
 
+// 返回与当前关键帧共视程度最高的N个关键帧，如果共视的关键帧数量小于N，则返回所有共视的关键帧
 vector< KeyFrame * > KeyFrame::GetBestCovisibilityKeyFrames(const int &N) {
 	unique_lock< mutex > lock(mMutexConnections);
 	if((int)mvpOrderedConnectedKeyFrames.size() < N)
@@ -225,6 +228,7 @@ vector< KeyFrame * > KeyFrame::GetBestCovisibilityKeyFrames(const int &N) {
 		return vector< KeyFrame * >(mvpOrderedConnectedKeyFrames.begin(), mvpOrderedConnectedKeyFrames.begin() + N);
 }
 
+// 根据权重返回与当前关键帧共视的关键帧，权重w表示最低的共视权重，低于该权重的将不会被包含在返回结果中
 vector< KeyFrame * > KeyFrame::GetCovisiblesByWeight(const int &w) {
 	unique_lock< mutex > lock(mMutexConnections);
 
