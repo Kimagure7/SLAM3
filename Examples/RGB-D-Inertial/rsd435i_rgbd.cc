@@ -85,12 +85,6 @@ int main(int argc, char **argv) {
     int cPort = 0;
     app.add_option("--cPort", cPort);
 
-
-    // if lost more than max_lost_frames, terminate
-    // disable the check if <= 0
-    // int max_lost_frames = -1;
-    // app.add_option("--max_lost_frames", max_lost_frames);
-
     try {
         app.parse(argc, argv);
     } catch(const CLI::ParseError &e) {
@@ -168,9 +162,10 @@ int main(int argc, char **argv) {
     vector< rs2_vector > v_accel_data_sync;
 
     int width_img, height_img;
-    double timestamp_image = -1.0;
-    bool image_ready       = false;
-    int count_im_buffer    = 0;    // count dropped frames
+    double timestamp_image      = -1.0;
+    double firstframe_timestamp = -1.0;
+    bool image_ready            = false;
+    int count_im_buffer         = 0;    // count dropped frames
 
     // start and stop just to get necessary profile
     rs2::pipeline_profile pipe_profile = pipe.start(cfg);
@@ -348,7 +343,11 @@ int main(int argc, char **argv) {
             vAccel       = v_accel_data_sync;
             vAccel_times = v_accel_timestamp_sync;
 
-            timestamp = timestamp_image;
+            if(firstframe_timestamp + 1.0 < 0.01) {
+                // 第一帧
+                firstframe_timestamp = timestamp_image;
+            }
+            timestamp = timestamp_image - firstframe_timestamp;
 
             // Clear IMU vectors
             v_gyro_data.clear();
