@@ -52,6 +52,19 @@ void LocalMapping::SetTracker(Tracking *pTracker) {
     mpTracker = pTracker;
 }
 
+/**
+ * @brief 本地映射线程的运行函数，负责处理关键帧、地图点的创建与优化。
+ *
+ * 该函数是本地映射线程的主要执行逻辑，包括但不限于：
+ * - 处理新的关键帧并将其插入到地图中。
+ * - 对地图点进行剔除以优化内存和计算效率。
+ * - 创建新的地图点以增加地图的细节。
+ * - 执行局部BA（束调整）来优化关键帧和地图点的位置。
+ * - 初始化IMU（惯性测量单元），并在必要时进行VIBA（视觉惯性BA）1和2阶段。
+ * - 检查并删除冗余的关键帧。
+ * - 插入关键帧到闭环检测器中，以便于后续的闭环检测和修正。
+ *
+ */
 void LocalMapping::Run() {
     mbFinished = false;
 
@@ -191,6 +204,15 @@ void LocalMapping::Run() {
     SetFinish();
 }
 
+/**
+ * @brief 插入一个新的关键帧到局部地图中
+ * 
+ * 此函数用于将一个关键帧（KeyFrame* pKF）插入到局部地图的待处理关键帧列表中。
+ * 同时，它会设置一个标志mbAbortBA为true，这通常用于通知优化线程停止当前的BA（束调整）过程，
+ * 因为有新的关键帧需要被处理。
+ * 
+ * @param pKF 要插入的关键帧指针
+ */
 void LocalMapping::InsertKeyFrame(KeyFrame *pKF) {
     unique_lock< mutex > lock(mMutexNewKFs);
     mlNewKeyFrames.push_back(pKF);

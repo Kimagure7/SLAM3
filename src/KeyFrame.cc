@@ -298,6 +298,15 @@ set< MapPoint * > KeyFrame::GetMapPoints() {
 	return s;
 }
 
+/**
+ * 计算关键帧中被跟踪的MapPoint数量
+ * 
+ * 此函数返回关键帧中有效（非坏点）且观察次数达到指定最小值的MapPoint的数量。
+ * 如果`minObs`参数设置为0或负数，则忽略观察次数检查，返回所有有效MapPoint的数量。
+ * 
+ * @param minObs 一个整数，表示要计算的MapPoint的最小观察次数。如果为0或负数，则不进行检查。
+ * @return 返回满足条件的MapPoint的数量。
+ */
 int KeyFrame::TrackedMapPoints(const int &minObs) {
 	unique_lock< mutex > lock(mMutexFeatures);
 
@@ -329,6 +338,15 @@ MapPoint *KeyFrame::GetMapPoint(const size_t &idx) {
 	return mvpMapPoints[idx];
 }
 
+/**
+ * 更新关键帧的连接关系
+ * 
+ * 此函数用于更新当前关键帧与其他关键帧之间的连接关系，基于它们共享的MapPoint数量。
+ * 如果共享的MapPoint数量超过一定阈值（默认为15），则在两个关键帧之间建立连接。
+ * 如果没有其他关键帧与当前关键帧共享足够的MapPoint，那么将与拥有最多共享MapPoint的关键帧建立连接。
+ * 
+ * @param upParent 一个布尔值，用于指示是否需要更新父级信息。如果为true，则在建立首次连接时更新父级信息。
+ */
 void KeyFrame::UpdateConnections(bool upParent) {
 	map< KeyFrame *, int > KFcounter;
 
@@ -496,6 +514,16 @@ void KeyFrame::SetErase() {
 	}
 }
 
+/**
+ * 标记关键帧为坏帧并清理相关连接
+ * 
+ * 此函数用于将当前关键帧标记为坏帧（mbBad设为true），并执行以下操作：
+ * - 清除与所有其他关键帧的连接关系。
+ * - 从每个MapPoint中移除对该关键帧的观察。
+ * - 更新其子关键帧的父级关系，以确保拓扑树结构的连通性。
+ * - 如果有父级，更新其相对于父级的姿态，并从父级中移除对该关键帧的引用。
+ * - 最后，从地图和关键帧数据库中删除当前关键帧。
+ */
 void KeyFrame::SetBadFlag() {
 	{
 		unique_lock< mutex > lock(mMutexConnections);
@@ -606,7 +634,18 @@ void KeyFrame::EraseConnection(KeyFrame *pKF) {
 		UpdateBestCovisibles();
 }
 
-
+/**
+ * 获取特定区域内的特征点索引
+ * 
+ * 此函数返回在给定坐标(x, y)和半径r的矩形区域内，所有特征点的索引。
+ * 可以选择从左或右图像中查找特征点。返回的向量`vIndices`包含了满足条件的所有特征点在关键帧中的索引。
+ * 
+ * @param x 指定区域中心的X坐标。
+ * @param y 指定区域中心的Y坐标。
+ * @param r 指定区域的半径（矩形宽高的一半）。
+ * @param bRight 一个布尔值，用于指示是否从右图像中查找特征点。默认为false，表示从左图像查找。
+ * @return 返回一个包含区域内所有特征点索引的向量。
+ */
 vector< size_t > KeyFrame::GetFeaturesInArea(const float &x, const float &y, const float &r, const bool bRight) const {
 	vector< size_t > vIndices;
 	vIndices.reserve(N);
@@ -668,7 +707,15 @@ bool KeyFrame::UnprojectStereo(int i, Eigen::Vector3f &x3D) {
 	} else
 		return false;
 }
-
+/**
+ * @brief 计算关键帧场景的中位深度
+ * 
+ * 该函数用于计算给定关键帧场景中的中位深度。它首先检查特征点和姿态是否已锁定，
+ * 然后获取所有地图点的深度信息，对这些深度进行排序，并返回指定四分位数的值。
+ * 
+ * @param q 指定的四分位数（默认为2，即中位数）
+ * @return float 返回指定四分位数的深度值；如果特征点数量为0，则返回-1.0
+ */
 float KeyFrame::ComputeSceneMedianDepth(const int q) {
 	if(N == 0)
 		return -1.0;
@@ -734,6 +781,16 @@ void KeyFrame::UpdateMap(Map *pMap) {
 	mpMap = pMap;
 }
 
+/**
+ * 准备关键帧数据以供保存
+ * 
+ * 本函数用于在保存关键帧之前，备份与该关键帧相关联的所有MapPoint、相连的KeyFrame、子KeyFrame、环路边KeyFrame、合并边KeyFrame的ID，以及相机和惯性测量单元（IMU）的相关信息。
+ * 这些信息将被用于恢复或检查系统状态。
+ *
+ * @param spKF 一个包含所有需要备份的关键帧的集合。
+ * @param spMP 一个包含所有需要备份的地图点的集合。
+ * @param spCam 一个包含所有需要备份的相机模型的集合。
+ */
 void KeyFrame::PreSave(set< KeyFrame * > &spKF, set< MapPoint * > &spMP, set< GeometricCamera * > &spCam) {
 	// Save the id of each MapPoint in this KF, there can be null pointer in the vector
 	mvBackupMapPointsId.clear();
@@ -803,6 +860,15 @@ void KeyFrame::PreSave(set< KeyFrame * > &spKF, set< MapPoint * > &spMP, set< Ge
 		mBackupImuPreintegrated.CopyFrom(mpImuPreintegrated);
 }
 
+/**
+ * 从备份数据恢复关键帧信息
+ *
+ * 此函数用于在加载关键帧数据后，根据之前保存的备份信息（如MapPoint、相连关键帧、相机等的ID）重建关键帧的相关变量和结构。
+ *
+ * @param mpKFid 一个映射，包含所有已加载的关键帧及其ID。
+ * @param mpMPid 一个映射，包含所有已加载的MapPoint及其ID。
+ * @param mpCamId 一个映射，包含所有已加载的GeometricCamera及其ID。
+ */
 void KeyFrame::PostLoad(map< long unsigned int, KeyFrame * > &mpKFid, map< long unsigned int, MapPoint * > &mpMPid, map< unsigned int, GeometricCamera * > &mpCamId) {
 	// Rebuild the empty variables
 
@@ -881,6 +947,19 @@ void KeyFrame::PostLoad(map< long unsigned int, KeyFrame * > &mpKFid, map< long 
 	UpdateBestCovisibles();
 }
 
+/**
+ * @brief 投影地图点到图像并考虑畸变
+ * 
+ * 此函数将给定的地图点投影到关键帧的图像上，并考虑到相机的畸变。
+ * 它首先将3D点从世界坐标系转换到相机坐标系，然后检查深度是否为正，
+ * 接着进行投影和畸变校正，最后返回投影后的2D点位置。
+ *
+ * @param pMP 指定的地图点
+ * @param kp 输出的cv::Point2f类型的关键点位置
+ * @param u 输出的x坐标
+ * @param v 输出的y坐标
+ * @return bool 如果投影成功则返回true，否则返回false（例如深度为负或超出图像边界）
+ */
 bool KeyFrame::ProjectPointDistort(MapPoint *pMP, cv::Point2f &kp, float &u, float &v) {
 
 	// 3D in absolute coordinates
@@ -941,6 +1020,18 @@ bool KeyFrame::ProjectPointDistort(MapPoint *pMP, cv::Point2f &kp, float &u, flo
 	return true;
 }
 
+/**
+ * @brief 投影地图点到图像不考虑畸变
+ *
+ * 该函数与ProjectPointDistort类似，但不进行畸变校正。它直接将3D地图点投影到关键帧图像上，
+ * 并检查是否在有效区域内。如果深度为负或超出边界，则返回false。
+ *
+ * @param pMP 指定的地图点
+ * @param kp 输出的cv::Point2f类型的关键点位置
+ * @param u 输出的x坐标
+ * @param v 输出的y坐标
+*  return bool 如果投影成功则返回true，否则返回false（例如深度为负或超出图像边界）
+ */
 bool KeyFrame::ProjectPointUnDistort(MapPoint *pMP, cv::Point2f &kp, float &u, float &v) {
 
 	// 3D in absolute coordinates

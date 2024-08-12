@@ -4521,7 +4521,18 @@ void Optimizer::MergeInertialBA(KeyFrame* pCurrKF, KeyFrame* pMergeKF, bool *pbS
 
     pMap->IncreaseChangeIndex();
 }
-
+/**
+ * @brief 优化当前帧相对于最近关键帧的惯性姿态，通过调整姿态、速度、陀螺仪偏差和加速度偏差来最小化观测误差。
+ * 
+ * 此函数使用g2o库进行图优化，其中包含了对单目和立体视觉观测的处理，以及IMU预积分约束。它首先构建图模型，
+ * 然后执行多轮优化以识别并排除异常值观测。与PoseInertialOptimizationLastFrame不同的是，此函数将最近的关键帧
+ * 作为固定参考点。
+ * 
+ * @param pFrame 当前帧指针
+ * @param bRecInit 是否重新初始化标志
+ * 
+ * @return int 返回初始对应关系数与被标记为异常值的对应关系数之差
+ */
 int Optimizer::PoseInertialOptimizationLastKeyFrame(Frame *pFrame, bool bRecInit)
 {
     g2o::SparseOptimizer optimizer;
@@ -4906,6 +4917,17 @@ int Optimizer::PoseInertialOptimizationLastKeyFrame(Frame *pFrame, bool bRecInit
     return nInitialCorrespondences-nBad;
 }
 
+/**
+ * @brief 优化当前帧的惯性姿态，通过调整姿态、速度、陀螺仪偏差和加速度偏差来最小化观测误差。
+ * 
+ * 这个函数使用g2o库进行图优化，其中包含了对单目和立体视觉观测的处理，以及IMU预积分约束。
+ * 它首先构建图模型，然后执行多轮优化以识别并排除异常值观测。
+ * 
+ * @param pFrame 当前帧指针
+ * @param bRecInit 是否重新初始化标志
+ * 
+ * @return int 返回初始对应关系数与被标记为异常值的对应关系数之差
+ */
 int Optimizer::PoseInertialOptimizationLastFrame(Frame *pFrame, bool bRecInit)
 {
     g2o::SparseOptimizer optimizer;

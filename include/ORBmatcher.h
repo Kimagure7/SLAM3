@@ -44,6 +44,7 @@ namespace ORB_SLAM3
 
         // Search matches between Frame keypoints and projected MapPoints. Returns number of matches
         // Used to track the local map (Tracking)
+
         int SearchByProjection(Frame &F, const std::vector<MapPoint*> &vpMapPoints, const float th=3, const bool bFarPoints = false, const float thFarPoints = 50.0f);
 
         // Project MapPoints tracked in last frame into the current frame and search matches.
@@ -52,15 +53,18 @@ namespace ORB_SLAM3
         int SearchByProjection(Frame &CurrentFrame, const Frame &LastFrame, const float th, const bool bMono);
 
         // Project MapPoints seen in KeyFrame into the Frame and search matches.
-        // Used in relocalisation (Tracking)
+        // Used in relocalization (Tracking)
+
         int SearchByProjection(Frame &CurrentFrame, KeyFrame* pKF, const std::set<MapPoint*> &sAlreadyFound, const float th, const int ORBdist);
 
         // Project MapPoints using a Similarity Transformation and search matches.
         // Used in loop detection (Loop Closing)
+
         int SearchByProjection(KeyFrame* pKF, Sophus::Sim3<float> &Scw, const std::vector<MapPoint*> &vpPoints, std::vector<MapPoint*> &vpMatched, int th, float ratioHamming=1.0);
 
         // Project MapPoints using a Similarity Transformation and search matches.
         // Used in Place Recognition (Loop Closing and Merging)
+
         int SearchByProjection(KeyFrame* pKF, Sophus::Sim3<float> &Scw, const std::vector<MapPoint*> &vpPoints, const std::vector<KeyFrame*> &vpPointsKFs, std::vector<MapPoint*> &vpMatched, std::vector<KeyFrame*> &vpMatchedKF, int th, float ratioHamming=1.0);
 
         // Search matches between MapPoints in a KeyFrame and ORB in a Frame.
@@ -71,6 +75,7 @@ namespace ORB_SLAM3
         int SearchByBoW(KeyFrame *pKF1, KeyFrame* pKF2, std::vector<MapPoint*> &vpMatches12);
 
         // Matching for the Map Initialization (only used in the monocular case)
+        
         int SearchForInitialization(Frame &F1, Frame &F2, std::vector<cv::Point2f> &vbPrevMatched, std::vector<int> &vnMatches12, int windowSize=10);
 
         // Matching to triangulate new MapPoints. Check Epipolar Constraint.

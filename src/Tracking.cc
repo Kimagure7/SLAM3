@@ -1365,6 +1365,7 @@ void Tracking::Track() {
                 }
             } else {
                 if(mState == RECENTLY_LOST) {
+                    // 如果追踪位姿还能狗住 后面tracklocalmap说不定能救回来
                     Verbose::PrintMess("Lost for a short time", Verbose::VERBOSITY_NORMAL);
 
                     bOK = true;
@@ -1429,7 +1430,9 @@ void Tracking::Track() {
                         pKFend->mNextKF  = pKFcur;
 
                         // update timestamps
-                        cout << "vpKFs.back()->mpImuPreintegrated" << vpKFs.back()->mpImuPreintegrated << endl;
+                        // goproslam 中时间戳都是0开始 需要把地图中旧的帧时间戳改掉 
+                        // 在修改rsd435i_rgbd后 实时的开始时间戳也是0了
+                        cout << "vpKFs.back()->mpImuPreintegrated: " << vpKFs.back()->mpImuPreintegrated << endl;
                         double dt = 1.0 / 29.97;
                         if(vpKFs.back()->mpImuPreintegrated != nullptr) {
                             double dt = vpKFs.back()->mpImuPreintegrated->dT;
@@ -1439,16 +1442,17 @@ void Tracking::Track() {
                             kf->mTimeStamp += t_offset;
                         }
 
-                        cout << "pKFCur->mTimeStamp" << pKFcur->mTimeStamp << endl;
-                        cout << "vpKFs.front()->mTimeStamp" << vpKFs.front()->mTimeStamp << endl;
-                        cout << "vpKFs.back()->mTimeStamp" << vpKFs.back()->mTimeStamp << endl;
+                        cout << "pKFCur->mTimeStamp: " << pKFcur->mTimeStamp << endl;
+                        cout << "vpKFs.front()->mTimeStamp: " << vpKFs.front()->mTimeStamp << endl;
+                        cout << "vpKFs.back()->mTimeStamp: " << vpKFs.back()->mTimeStamp << endl;
 
                         // update map point matches
                         // actual update is done in local mapper
+                        // 这里似乎只是打印一下？
                         vector< MapPoint * > vpMapPointMatches = pKFcur->GetMapPointMatches();
-                        cout << "pKFcur->GetMapPointMatches().size()" << vpMapPointMatches.size() << endl;
+                        cout << "pKFcur->GetMapPointMatches().size(): " << vpMapPointMatches.size() << endl;
 
-                        cout << "1691 pKFcur->GetVelocity() " << pKFcur->GetVelocity() << endl;
+                        cout << "1454 pKFcur->GetVelocity(): " << pKFcur->GetVelocity() << endl;
 
                         // update last keyframe
                         mnLastKeyFrameId = pKFcur->mnId;
@@ -1538,10 +1542,8 @@ void Tracking::Track() {
         if(!mbOnlyTracking) {
             if(bOK) {
                 bOK = TrackLocalMap();
-                // cout << "Done TrackLocalMap() line 1801" << endl;
             }
             if(!bOK) {
-
                 if(mbLoadedMap) {
                     // if we loaded map from file, it means we are running relocalization
                     // in that case we don't want to reset current map
@@ -1562,7 +1564,7 @@ void Tracking::Track() {
 
         if(bOK)
             mState = OK;
-        else if(mState == OK) {
+        else if(mState == OK) { //意味着TrackLocalMap失败 但是前面的追踪位姿成功了
             if(mSensor == System::IMU_MONOCULAR || mSensor == System::IMU_STEREO || mSensor == System::IMU_RGBD) {
                 Verbose::PrintMess("Track lost for less than one second...", Verbose::VERBOSITY_NORMAL);
                 if(!pCurrentMap->isImuInitialized() || !pCurrentMap->GetIniertialBA2()) {
@@ -1840,6 +1842,14 @@ void Tracking::StereoInitialization() {
     }
 }
 
+/**
+ * @brief 初始化单目视觉追踪
+ *
+ * 该函数负责初始化单目视觉追踪过程。首先，它检查是否满足初始化条件，如关键点数量和时间间隔。
+ * 如果条件不满足，则返回并等待下一次尝试。如果满足条件，函数会寻找初始帧与当前帧之间的特征匹配，
+ * 并检查匹配数量是否足够。然后，使用两个视图的三角化方法来估计相机位姿和3D点位置。
+ * 如果三角化成功，将设置初始帧和当前帧的位姿，并调用`CreateInitialMapMonocular`函数来创建地图。
+ */
 void Tracking::MonocularInitialization() {
     if(!mbReadyToInitializate) {
         // Set Reference Frame
@@ -1928,7 +1938,16 @@ void Tracking::MonocularInitialization() {
 }
 
 
-
+/**
+ * @brief 为单目视觉创建初始地图
+ *
+ * 此函数用于在单目视觉模式下初始化地图。它首先通过当前帧和初始帧创建两个关键帧，
+ * 并根据传感器类型处理IMU信息。然后，计算Bag of Words（BoW）表示并添加关键帧到地图中。
+ * 接下来，基于初始匹配和3D点，创建新的MapPoint，并将它们与关键帧关联。更新所有相关连接，
+ * 进行全局束调整优化，并根据深度信息缩放关键帧和MapPoint的位置。
+ * 最后，检查初始化是否成功，如果失败则重置系统；否则，更新本地映射器、追踪状态等变量，
+ * 并设置参考关键帧和地图点以进行后续处理。
+ */
 void Tracking::CreateInitialMapMonocular() {
     // Create KeyFrames
     KeyFrame *pKFini = new KeyFrame(mInitialFrame, mpAtlas->GetCurrentMap(), mpKeyFrameDB);
@@ -2059,7 +2078,14 @@ void Tracking::CreateInitialMapMonocular() {
     initID = pKFcur->mnId;
 }
 
-
+/**
+ * @brief 在地图集中创建新地图
+ *
+ * 此函数用于在系统初始化或需要创建新地图时调用。它首先记录当前帧的ID作为初始化帧的ID，
+ * 然后在地图集中创建一个新的地图实例。如果传感器类型是IMU相关的，将设置惯性传感器标志。
+ * 接着，重置一些状态变量，包括设置初始帧ID为当前帧ID加1，将追踪状态设为NO_IMAGES_YET，
+ * 以及清除与上一关键帧和参考关键帧相关的信息。最后，清除初始匹配列表并设置一个标记表示已创建新地图。
+ */
 void Tracking::CreateMapInAtlas() {
     mnLastInitFrameId = mCurrentFrame.mnId;
     mpAtlas->CreateNewMap();
@@ -2258,7 +2284,7 @@ void Tracking::UpdateLastFrame() {
  * @brief 使用运动模型进行跟踪
  *
  * 该函数尝试使用上一帧和当前帧之间的运动模型预测并更新当前帧的姿态。
- * 如果IMU初始化并且不需要重置，则使用IMU预测状态。否则，使用上一帧的速度更新当前姿态，
+ * 如果IMU初始化并且不需要重置，则使用IMU预测状态，然后返回true。否则，使用上一帧的速度更新当前姿态，
  * 接着，通过投影上一帧的点到当前帧来搜索匹配点，并优化姿态。
  * 最后，检查匹配点的数量以确定跟踪是否成功。
  *
@@ -2720,7 +2746,14 @@ void Tracking::CreateNewKeyFrame() {
     mpLastKeyFrame   = pKF;
 }
 
-
+/**
+ * @brief SearchLocalPoints 在当前帧中搜索局部地图点，以进行特征匹配和跟踪。
+ * 
+ * 该函数首先清理当前帧中已经匹配的MapPoint，标记那些不好的MapPoint为NULL，
+ * 并更新其他MapPoint的状态。然后，它检查局部地图中的每个MapPoint是否可见于当前帧，
+ * 并统计需要匹配的点数。最后，使用ORBmatcher进行基于投影的特征匹配。
+ * 匹配参数根据传感器类型、IMU初始化状态以及系统状态（如是否丢失）进行调整。
+ */
 void Tracking::SearchLocalPoints() {
     // Do not search map points already matched
     for(vector< MapPoint * >::iterator vit = mCurrentFrame.mvpMapPoints.begin(), vend = mCurrentFrame.mvpMapPoints.end(); vit != vend; vit++) {
@@ -2822,7 +2855,21 @@ void Tracking::UpdateLocalPoints() {
     }
 }
 
-
+/**
+ * @brief 更新局部关键帧列表
+ * 
+ * 此函数用于更新追踪线程中的局部关键帧列表。它通过统计每个地图点在哪些关键帧中被观测到，
+ * 并将这些关键帧添加到局部地图中。同时，它还根据地图点的观测次数来确定哪个关键帧共享了最多的地图点，
+ * 并将其设为参考关键帧。
+ *
+ * 这个过程包括以下步骤：
+ * 1. 统计每个关键帧中的地图点数量。
+ * 2. 清除并预留足够的空间给局部关键帧列表。
+ * 3. 将所有包含至少一个地图点的关键帧加入到局部关键帧列表中，并标记它们与当前追踪的关联。
+ * 4. 添加额外的关键邻域和子/父关系的关键帧，以丰富局部地图的信息。
+ * 5. 如果系统使用IMU传感器，还会添加最近的临时性（时间上接近）的关键帧，以帮助IMU数据的融合。
+ *
+ */
 void Tracking::UpdateLocalKeyFrames() {
     // Each map point vote for the keyframes in which it has been observed
     map< KeyFrame *, int > keyframeCounter;
@@ -2947,6 +2994,14 @@ void Tracking::UpdateLocalKeyFrames() {
     }
 }
 
+/**
+ * @brief 执行重定位过程，当跟踪丢失时尝试恢复相机位置。
+ *
+ * 该函数首先计算当前帧的Bag of Words表示，然后从关键帧数据库中查询候选关键帧进行重定位。
+ * 通过ORB匹配和PnP求解器来估计相机姿态。如果找到足够多的匹配点（至少50个），则认为重定位成功。
+ *
+ * @return 如果重定位成功，则返回true；否则返回false。
+ */
 bool Tracking::Relocalization() {
     Verbose::PrintMess("Starting relocalization", Verbose::VERBOSITY_NORMAL);
     // Compute Bag of Words Vector
@@ -3095,6 +3150,14 @@ bool Tracking::Relocalization() {
     }
 }
 
+/**
+ * @brief 重置整个系统状态，包括局部映射、闭环检测、数据库和地图。
+ *
+ * 此函数用于在出现跟踪失败或系统初始化前重置整个视觉SLAM系统的状态。
+ * 它会停止并重置所有运行中的模块，清除数据库和地图信息，并将所有计数器归零。
+ *
+ * @param bLocMap 如果为true，则仅重置局部映射；如果为false，则进行完全重置。
+ */
 void Tracking::Reset(bool bLocMap) {
     Verbose::PrintMess("System Reseting", Verbose::VERBOSITY_NORMAL);
 

@@ -76,6 +76,7 @@ public:
     void DetectNBestCandidates(KeyFrame *pKF, vector<KeyFrame*> &vpLoopCand, vector<KeyFrame*> &vpMergeCand, int nNumCandidates);
 
     // Relocalization
+    
     std::vector<KeyFrame*> DetectRelocalizationCandidates(Frame* F, Map* pMap);
 
     void PreSave();

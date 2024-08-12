@@ -239,7 +239,21 @@ Frame::Frame(const cv::Mat &imGray, const cv::Mat &imDepth, const double &timeSt
     AssignFeaturesToGrid();
 }
 
-
+/**
+ * @brief 构造函数：初始化帧对象，包括ORB特征提取、相机参数设置、IMU预积分等。
+ * 
+ * @param imGray 灰度图像
+ * @param timeStamp 时间戳
+ * @param extractor ORB特征提取器指针
+ * @param voc ORB词汇树指针
+ * @param pCamera 相机模型指针
+ * @param distCoef 相机畸变系数矩阵
+ * @param bf 基线乘以焦距（像素）
+ * @param thDepth 深度阈值
+ * @param pPrevF 上一帧指针，用于初始化速度等信息
+ * @param ImuCalib IMU校准参数
+ * @param aruco_dict ArUcO字典，用于检测图像中的ArUcO标记。
+ */
 Frame::Frame(const cv::Mat &imGray, const double &timeStamp, ORBextractor *extractor, ORBVocabulary *voc, GeometricCamera *pCamera, cv::Mat &distCoef, const float &bf, const float &thDepth, Frame *pPrevF, const IMU::Calib &ImuCalib, cv::Ptr< cv::aruco::Dictionary > aruco_dict)
     : mpcpi(NULL), mpORBvocabulary(voc), mpORBextractorLeft(extractor), mpORBextractorRight(static_cast< ORBextractor * >(NULL)),
       mTimeStamp(timeStamp), mK(static_cast< Pinhole * >(pCamera)->toK()), mK_(static_cast< Pinhole * >(pCamera)->toK_()), mDistCoef(distCoef.clone()), mbf(bf), mThDepth(thDepth),

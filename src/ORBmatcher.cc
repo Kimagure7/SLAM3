@@ -39,6 +39,20 @@ ORBmatcher::ORBmatcher(float nnratio, bool checkOri)
     : mfNNratio(nnratio), mbCheckOrientation(checkOri) {
 }
 
+/**
+ * @brief 通过投影搜索匹配点
+ *
+ * 此函数用于在帧F中，基于投影和视差信息，搜索与地图点vpMapPoints中的点相匹配的特征点。
+ * 它考虑了视图方向、深度阈值以及立体匹配信息来确定最佳匹配。Used to track the local map (Tracking)
+ *
+ * @param F 帧对象，包含当前帧的信息如特征描述符、尺度因子等
+ * @param vpMapPoints 地图点向量，包含待匹配的地图点
+ * @param th 匹配时的半径缩放因子，默认为1.0表示不缩放
+ * @param bFarPoints 是否只考虑远距离点的标志位
+ * @param thFarPoints 远距离点的深度阈值
+ *
+ * @return int 返回找到的总匹配数
+ */
 int ORBmatcher::SearchByProjection(Frame &F, const vector< MapPoint * > &vpMapPoints, const float th, const bool bFarPoints, const float thFarPoints) {
     int nmatches = 0, left = 0, right = 0;
 
@@ -391,8 +405,23 @@ int ORBmatcher::SearchByBoW(KeyFrame *pKF, Frame &F, vector< MapPoint * > &vpMap
     return nmatches;
 }
 
-int ORBmatcher::SearchByProjection(KeyFrame *pKF, Sophus::Sim3f &Scw, const vector< MapPoint * > &vpPoints,
-                                   vector< MapPoint * > &vpMatched, int th, float ratioHamming) {
+/**
+ * @brief 在关键帧中通过投影搜索匹配点
+ *
+ * 此函数在给定的关键帧pKF中，使用Sim3f变换Scw，为地图点vpPoints寻找匹配。它将地图点投影到关键帧的图像平面上，
+ * 并在指定的搜索半径内查找最佳匹配点。同时应用了距离和视图角度的约束。
+ * Used in loop detection (Loop Closing)
+ *
+ * @param pKF 关键帧，包含相机参数、特征描述符等信息
+ * @param Scw 从世界坐标系到相机坐标系的Sim3f变换
+ * @param vpPoints 需要在关键帧中寻找匹配的地图点向量
+ * @param vpMatched 输出向量，保存找到的匹配地图点指针
+ * @param th 搜索半径系数
+ * @param ratioHamming 匹配距离比率阈值（用于汉明距离）
+ *
+ * @return int 返回找到的总匹配数
+ */
+int ORBmatcher::SearchByProjection(KeyFrame *pKF, Sophus::Sim3f &Scw, const vector< MapPoint * > &vpPoints, vector< MapPoint * > &vpMatched, int th, float ratioHamming) {
     // Get Calibration Parameters for later projection
     const float &fx = pKF->fx;
     const float &fy = pKF->fy;
@@ -492,8 +521,25 @@ int ORBmatcher::SearchByProjection(KeyFrame *pKF, Sophus::Sim3f &Scw, const vect
     return nmatches;
 }
 
-int ORBmatcher::SearchByProjection(KeyFrame *pKF, Sophus::Sim3< float > &Scw, const std::vector< MapPoint * > &vpPoints, const std::vector< KeyFrame * > &vpPointsKFs,
-                                   std::vector< MapPoint * > &vpMatched, std::vector< KeyFrame * > &vpMatchedKF, int th, float ratioHamming) {
+/**
+ * @brief 通过投影在关键帧中搜索匹配点
+ *
+ * 此函数用于在给定的关键帧pKF中，基于Sim3f变换Scw，为一系列地图点vpPoints寻找匹配。它首先将地图点投影到关键帧的图像上，
+ * 然后在指定的搜索半径内查找最佳匹配点。同时考虑了深度、视图角度和尺度不变性的约束。
+ * Used in Place Recognition (Loop Closing and Merging)
+ *
+ * @param pKF 关键帧指针，包含相机参数、特征描述符等信息
+ * @param Scw Sophus::Sim3< float >类型，表示从世界坐标系到相机坐标系的变换
+ * @param vpPoints 需要在关键帧中寻找匹配的地图点向量
+ * @param vpPointsKFs 每个地图点对应的关键帧向量，用于返回找到匹配时的相关信息
+ * @param vpMatched 输出向量，保存找到的匹配地图点指针
+ * @param vpMatchedKF 输出向量，保存与每个vpMatched中的MapPoint关联的关键帧指针
+ * @param th 搜索半径系数，用于确定搜索区域大小
+ * @param ratioHamming 匹配距离比率阈值（汉明距离），用于评估特征描述符之间的相似度
+ *
+ * @return int 返回找到的总匹配数。
+ */
+int ORBmatcher::SearchByProjection(KeyFrame *pKF, Sophus::Sim3< float > &Scw, const std::vector< MapPoint * > &vpPoints, const std::vector< KeyFrame * > &vpPointsKFs, std::vector< MapPoint * > &vpMatched, std::vector< KeyFrame * > &vpMatchedKF, int th, float ratioHamming) {
     // Get Calibration Parameters for later projection
     const float &fx = pKF->fx;
     const float &fy = pKF->fy;
@@ -599,7 +645,19 @@ int ORBmatcher::SearchByProjection(KeyFrame *pKF, Sophus::Sim3< float > &Scw, co
 
     return nmatches;
 }
-
+/**
+ * @brief 在初始化阶段搜索匹配点对
+ *
+ * 该函数用于在两个帧（F1和F2）之间寻找匹配的特征点，以进行初始化过程。它使用ORB特征描述符，并应用了最近邻比值测试来筛选匹配。(only used in the monocular case)
+ *
+ * @param F1 第一个帧，包含关键点和描述符信息
+ * @param F2 第二个帧，包含关键点和描述符信息
+ * @param vbPrevMatched 前一次迭代中与F1对应的关键点位置列表
+ * @param vnMatches12 输出参数，存储从F1到F2的匹配结果索引列表
+ * @param windowSize 搜索区域的窗口大小
+ *
+ * @return 匹配的关键点对数量
+ */
 int ORBmatcher::SearchForInitialization(Frame &F1, Frame &F2, vector< cv::Point2f > &vbPrevMatched, vector< int > &vnMatches12, int windowSize) {
     int nmatches = 0;
     vnMatches12  = vector< int >(F1.mvKeysUn.size(), -1);
@@ -1540,17 +1598,18 @@ int ORBmatcher::SearchBySim3(KeyFrame *pKF1, KeyFrame *pKF2, std::vector< MapPoi
 }
 
 /**
- * @brief 通过投影搜索匹配点
- * 
- * 该函数用于在当前帧(CurrentFrame)中寻找与上一帧(LastFrame)中地图点的匹配。它通过将上一帧中的地图点投影到当前帧，
- * 并在投影位置附近的窗口内搜索最佳匹配的关键点，以建立两帧之间的对应关系。
+ * @brief 通过投影搜索当前帧和上一帧之间的匹配点
  *
- * @param CurrentFrame 当前帧，包含当前的相机位姿和关键点信息。
- * @param LastFrame 上一帧，用于提供参考的地图点和关键点信息。
- * @param th 匹配时的搜索窗口大小因子。
- * @param bMono 是否为单目模式。如果为双目模式，则会额外进行右相机的匹配检查。
+ * 此函数用于在当前帧CurrentFrame中，基于上一帧LastFrame，寻找地图点的匹配。它首先将LastFrame中的地图点投影到CurrentFrame，
+ * 然后在指定的搜索窗口内查找最佳匹配。同时考虑了深度、视图角度、尺度不变性和旋转一致性约束。
+ * Used to track from previous frame (Tracking)
  *
- * @return int 返回找到的有效匹配数量。
+ * @param CurrentFrame 当前帧，包含相机参数、特征描述符等信息以及待匹配的地图点
+ * @param LastFrame 上一帧，用于提供历史地图点和其描述符
+ * @param th 搜索半径系数，用于确定搜索区域大小
+ * @param bMono 是否为单目模式（影响深度信息的使用）
+ *
+ * @return int 返回找到的总匹配数。
  */
 int ORBmatcher::SearchByProjection(Frame &CurrentFrame, const Frame &LastFrame, const float th, const bool bMono) {
     int nmatches = 0;
@@ -1748,18 +1807,19 @@ int ORBmatcher::SearchByProjection(Frame &CurrentFrame, const Frame &LastFrame, 
 }
 
 /**
- * @brief 在当前帧中通过投影搜索与关键帧的匹配点
- * 
- * 此函数用于在给定的关键帧(pKF)与当前帧(CurrentFrame)之间寻找地图点的匹配。它将关键帧中的地图点投影到当前帧，
- * 并在预测的尺度层级上搜索最佳匹配的关键点，以建立两者的对应关系。
+ * @brief 通过投影搜索当前帧与关键帧之间的匹配点
  *
- * @param CurrentFrame 当前帧，包含当前的相机位姿和关键点信息。
- * @param pKF 关键帧，用于提供参考的地图点信息。
- * @param sAlreadyFound 已经找到匹配的地图点集合，避免重复匹配。
- * @param th 匹配时的搜索窗口大小因子。
- * @param ORBdist 最大允许的ORB描述子距离，用于判断是否为有效匹配。
+ * 该函数用于在当前帧CurrentFrame中，基于给定的关键帧pKF，寻找地图点的匹配。它首先将关键帧中的地图点投影到当前帧，
+ * 然后在指定的搜索窗口内查找最佳匹配。同时考虑了深度、视图角度、尺度不变性和旋转一致性约束。
+ * Used in relocalization (Tracking)
  *
- * @return int 返回找到的有效匹配数量。
+ * @param CurrentFrame 当前帧，包含相机参数、特征描述符等信息以及待匹配的地图点
+ * @param pKF 关键帧，提供历史地图点和其描述符
+ * @param sAlreadyFound 已经找到的地图点集合，用于避免重复匹配
+ * @param th 搜索半径系数，用于确定搜索区域大小
+ * @param ORBdist 最大允许的ORB描述子距离，用于判断是否为最佳匹配
+ *
+ * @return int 返回找到的总匹配数。
  */
 int ORBmatcher::SearchByProjection(Frame &CurrentFrame, KeyFrame *pKF, const set< MapPoint * > &sAlreadyFound, const float th, const int ORBdist) {
     int nmatches = 0;
