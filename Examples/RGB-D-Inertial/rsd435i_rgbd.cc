@@ -163,7 +163,7 @@ int main(int argc, char **argv) {
 
     int width_img, height_img;
     double timestamp_image      = -1.0;
-    double firstframe_timestamp = -1.0;
+    double firstframe_timestamp = 0.0;
     bool image_ready            = false;
     int count_im_buffer         = 0;    // count dropped frames
 
@@ -343,7 +343,7 @@ int main(int argc, char **argv) {
             vAccel       = v_accel_data_sync;
             vAccel_times = v_accel_timestamp_sync;
 
-            if(firstframe_timestamp + 1.0 < 0.01) {
+            if(firstframe_timestamp< 0.01) {
                 // 第一帧
                 firstframe_timestamp = timestamp_image;
             }
@@ -389,7 +389,6 @@ int main(int argc, char **argv) {
                 cv::resize(depth, depth, cv::Size(width, height));
             }
         }
-
         // Pass the image to the SLAM system
         auto result = SLAM.LocalizeMonocular(im, timestamp, vImuMeas);
         if(tPort) {
