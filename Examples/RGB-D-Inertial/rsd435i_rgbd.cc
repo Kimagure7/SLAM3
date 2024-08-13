@@ -162,10 +162,9 @@ int main(int argc, char **argv) {
     vector< rs2_vector > v_accel_data_sync;
 
     int width_img, height_img;
-    double timestamp_image      = -1.0;
-    double firstframe_timestamp = 0.0;
-    bool image_ready            = false;
-    int count_im_buffer         = 0;    // count dropped frames
+    double timestamp_image = -1.0;
+    bool image_ready       = false;
+    int count_im_buffer    = 0;    // count dropped frames
 
     // start and stop just to get necessary profile
     rs2::pipeline_profile pipe_profile = pipe.start(cfg);
@@ -205,7 +204,7 @@ int main(int argc, char **argv) {
             // Align depth and rgb takes long time, move it out of the interruption to avoid losing IMU measurements
             fsSLAM = fs;
 
-            timestamp_image = fs.get_timestamp() * 1e-3;
+            timestamp_image = (fs.get_timestamp() + offset) * 1e-3;
             image_ready     = true;
 
             while(v_gyro_timestamp.size() > v_accel_timestamp_sync.size()) {
@@ -223,6 +222,9 @@ int main(int argc, char **argv) {
             if(m_frame.get_profile().stream_name() == "Gyro") {
                 // It runs at 200Hz
                 v_gyro_data.push_back(m_frame.get_motion_data());
+                // if(offset > -0.0001) {
+                //     offset = -m_frame.get_timestamp();
+                // }
                 v_gyro_timestamp.push_back((m_frame.get_timestamp() + offset) * 1e-3);
             } else if(m_frame.get_profile().stream_name() == "Accel") {
                 // It runs at 60Hz
@@ -343,11 +345,7 @@ int main(int argc, char **argv) {
             vAccel       = v_accel_data_sync;
             vAccel_times = v_accel_timestamp_sync;
 
-            if(firstframe_timestamp< 0.01) {
-                // 第一帧
-                firstframe_timestamp = timestamp_image;
-            }
-            timestamp = timestamp_image - firstframe_timestamp;
+            timestamp = timestamp_image;
 
             // Clear IMU vectors
             v_gyro_data.clear();
@@ -389,7 +387,8 @@ int main(int argc, char **argv) {
                 cv::resize(depth, depth, cv::Size(width, height));
             }
         }
-        // Pass the image to the SLAM system
+        // auto result = 1212 * 23132;
+        //  Pass the image to the SLAM system
         auto result = SLAM.LocalizeMonocular(im, timestamp, vImuMeas);
         if(tPort) {
             if(needDepth) {
