@@ -222,9 +222,9 @@ int main(int argc, char **argv) {
             if(m_frame.get_profile().stream_name() == "Gyro") {
                 // It runs at 200Hz
                 v_gyro_data.push_back(m_frame.get_motion_data());
-                // if(offset > -0.0001) {
-                //     offset = -m_frame.get_timestamp();
-                // }
+                if(offset > -0.0001) {
+                    offset = -m_frame.get_timestamp();
+                }
                 v_gyro_timestamp.push_back((m_frame.get_timestamp() + offset) * 1e-3);
             } else if(m_frame.get_profile().stream_name() == "Accel") {
                 // It runs at 60Hz
