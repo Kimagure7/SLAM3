@@ -989,8 +989,8 @@ Sophus::SE3f Tracking::GrabImageMonocular(const cv::Mat &im, const double &times
         else
             mCurrentFrame = Frame(mImGray, timestamp, mpORBextractorLeft, mpORBVocabulary, mpCamera, mDistCoef, mbf, mThDepth);
     } else if(mSensor == System::IMU_MONOCULAR) {
-        // std::cout<< "mState: " << mState << std::endl;
-        if(mState == NOT_INITIALIZED || mState == NO_IMAGES_YET) {
+        // ZoeyChiu 24.8.16: Add INIT_RELOCALIZE state
+        if(mState == NOT_INITIALIZED || mState == NO_IMAGES_YET || mState == INIT_RELOCALIZE ) {
             mCurrentFrame = Frame(mImGray, timestamp, mpIniORBextractor, mpORBVocabulary, mpCamera, mDistCoef, mbf, mThDepth, &mLastFrame, *mpImuCalib, maruco_dict);
         } else {
             mCurrentFrame = Frame(mImGray, timestamp, mpORBextractorLeft, mpORBVocabulary, mpCamera, mDistCoef, mbf, mThDepth, &mLastFrame, *mpImuCalib, maruco_dict);
@@ -2303,7 +2303,7 @@ bool Tracking::TrackWithMotionModel() {
         PredictStateIMU();
         return true;
     } else {
-        cout << "TrackWithMotionModel: (mCurrentFrame.mnId > mnLastRelocFrameId + mnFramesToResetIMU " << mCurrentFrame.mnId << " > " << mnLastRelocFrameId + mnFramesToResetIMU << endl;
+        // cout << "TrackWithMotionModel: (mCurrentFrame.mnId > mnLastRelocFrameId + mnFramesToResetIMU " << mCurrentFrame.mnId << " > " << mnLastRelocFrameId <<"+"<< mnFramesToResetIMU << endl;
         mCurrentFrame.SetPose(mVelocity * mLastFrame.GetPose());
     }
 
