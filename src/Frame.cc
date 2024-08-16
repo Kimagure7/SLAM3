@@ -240,19 +240,26 @@ Frame::Frame(const cv::Mat &imGray, const cv::Mat &imDepth, const double &timeSt
 }
 
 /**
- * @brief 构造函数：初始化帧对象，包括ORB特征提取、相机参数设置、IMU预积分等。
+ * @brief 构造函数：初始化帧对象
  * 
+ * 该构造函数用于初始化一个帧（Frame）对象。它接受多个参数，包括灰度图像、时间戳、ORB提取器、ORB词汇表、几何相机模型、畸变系数等。
+ * 它还负责执行以下操作：
+ * - 设置帧的唯一ID。
+ * - 初始化尺度层级信息，如尺度因子和逆尺度因子等。
+ * - 检测图像中的ArUcO标记。
+ * - 提取图像的ORB特征点。
+ * - 对特征点进行畸变校正。
+ * - 分配特征点到网格中以加速后续处理。
+ *
  * @param imGray 灰度图像
  * @param timeStamp 时间戳
- * @param extractor ORB特征提取器指针
- * @param voc ORB词汇树指针
+ * @param extractor ORB特征提取器
+ * @param voc ORB词汇表
  * @param pCamera 相机模型指针
  * @param distCoef 相机畸变系数矩阵
- * @param bf 基线乘以焦距（像素）
- * @param thDepth 深度阈值
- * @param pPrevF 上一帧指针，用于初始化速度等信息
- * @param ImuCalib IMU校准参数
- * @param aruco_dict ArUcO字典，用于检测图像中的ArUcO标记。
+ * @param bf 基线焦距比率（用于计算深度）
+ * @param thDepth 深度阈值（用于过滤深度信息）
+ * @param pPrevF 上一帧指针（如果存在）
  */
 Frame::Frame(const cv::Mat &imGray, const double &timeStamp, ORBextractor *extractor, ORBVocabulary *voc, GeometricCamera *pCamera, cv::Mat &distCoef, const float &bf, const float &thDepth, Frame *pPrevF, const IMU::Calib &ImuCalib, cv::Ptr< cv::aruco::Dictionary > aruco_dict)
     : mpcpi(NULL), mpORBvocabulary(voc), mpORBextractorLeft(extractor), mpORBextractorRight(static_cast< ORBextractor * >(NULL)),
@@ -338,7 +345,14 @@ Frame::Frame(const cv::Mat &imGray, const double &timeStamp, ORBextractor *extra
     mpMutexImu = new std::mutex();
 }
 
-
+/**
+ * @brief 将特征点分配到网格中
+ * 
+ * 该函数的主要目的是将当前帧的所有特征点根据其在图像中的位置，分配到一个预定义的网格系统中。
+ * 这样做可以加速后续的特征匹配过程，因为只需要在局部区域内搜索匹配项，而不是在整个图像上。
+ * 
+ * 如果存在右图（即Nleft != -1），则也会为右图创建一个类似的网格，并将右图的特征点分配到相应的网格中。
+ */
 void Frame::AssignFeaturesToGrid() {
     // Fill matrix with points
     const int nCells = FRAME_GRID_COLS * FRAME_GRID_ROWS;
@@ -370,6 +384,20 @@ void Frame::AssignFeaturesToGrid() {
     }
 }
 
+/**
+ * @brief 从输入图像中提取ORB特征点和描述符的函数。
+ *
+ * @param flag 用于选择左或右ORB特征提取器的标志，0表示左，非0表示右。
+ * @param im 输入图像，应为8位灰度图像，用于从中提取ORB特征。
+ * @param x0 指定区域的最小x坐标，用于限制关键点检测范围。
+ * @param x1 指定区域的最大x坐标，用于限制关键点检测范围。
+ *
+ * 此函数根据flag选择使用左或右ORB特征提取器来处理输入图像im，
+ * 并在指定的x坐标范围内（x0至x1）进行关键点和描述符的提取。如果flag为0，
+ * 将使用mpORBextractorLeft进行处理并将结果存储在monoLeft中；否则将使用
+ * mpORBextractorRight进行处理并将结果存储在monoRight中。该函数不返回任何值，
+ * 但会更新mvKeys、mDescriptors（对于左相机）或mvKeysRight、mDescriptorsRight（对于右相机）
+ */
 void Frame::ExtractORB(int flag, const cv::Mat &im, const int x0, const int x1) {
     vector< int > vLapping = { x0, x1 };
     if(flag == 0)
@@ -698,6 +726,13 @@ void Frame::ComputeBoW() {
     }
 }
 
+/**
+ * @brief UndistortKeyPoints 函数用于对当前帧中的特征点进行去畸变处理。
+ * 
+ * 如果相机的畸变系数为0，则直接将原始特征点赋值给去畸变后的特征点向量。
+ * 否则，函数会先将特征点坐标填充到一个矩阵中，然后调用 OpenCV 的 undistortPoints 函数，
+ * 使用相机内参和畸变系数对这些坐标进行去畸变。最后，将去畸变后的坐标重新填充到新的特征点向量中。
+ */
 void Frame::UndistortKeyPoints() {
     if(mDistCoef.at< float >(0) == 0.0) {
         mvKeysUn = mvKeys;
@@ -728,6 +763,14 @@ void Frame::UndistortKeyPoints() {
     }
 }
 
+/**
+ * @brief ComputeImageBounds 函数用于计算在去畸变后图像的边界。
+ * 
+ * 如果相机的畸变系数不为0，则首先创建一个4x2矩阵，表示图像四个角点的位置。
+ * 然后调用 OpenCV 的 undistortPoints 函数对这些角点进行去畸变处理，使用相机内参和畸变系数。
+ * 最后，计算去畸变后的最小和最大横纵坐标值来确定新的图像边界。
+ * 如果相机没有畸变（即畸变系数为0），则直接将原始图像的边界作为结果返回。
+ */
 void Frame::ComputeImageBounds(const cv::Mat &imLeft) {
     if(mDistCoef.at< float >(0) != 0.0) {
         cv::Mat mat(4, 2, CV_32F);

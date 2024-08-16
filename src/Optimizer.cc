@@ -388,7 +388,23 @@ void Optimizer::BundleAdjustment(const vector<KeyFrame *> &vpKFs, const vector<M
         }
     }
 }
-
+/**
+ * @brief 执行全局 Bundle Adjustment (BA) 优化，包括惯性测量数据和视觉观测。
+ * 
+ * 该函数使用 g2o 库执行全局 BA 优化，同时考虑了 IMU 数据和视觉观测，
+ * 并允许在优化过程中固定局部关键帧。优化过程可以被外部停止标志中断。
+ * 
+ * @param pMap 指向地图的指针，包含所有关键帧和地图点信息。
+ * @param its 迭代次数，用于控制优化过程的迭代次数。
+ * @param bFixLocal 如果为真，则固定局部的关键帧和地图点。
+ * @param nLoopId 环路闭合标识符，用于跟踪不同的环路闭合事件。
+ * @param pbStopFlag 停止标志指针，如果为真，则立即停止优化过程。
+ * @param bInit 是否是初始化阶段的标志，影响偏置项的处理方式。
+ * @param priorG 陀螺仪先验信息权重因子，默认值为1e-5。
+ * @param priorA 加速度计先验信息权重因子，默认值为1e-5。
+ * @param vSingVal 特征值向量指针（未使用）。
+ * @param bHess Hessian矩阵相关标志（未使用）。
+ */
 void Optimizer::FullInertialBA(Map *pMap, int its, const bool bFixLocal, const long unsigned int nLoopId, bool *pbStopFlag, bool bInit, float priorG, float priorA, Eigen::VectorXd *vSingVal, bool *bHess)
 {
     long unsigned int maxKFid = pMap->GetMaxKFid();
@@ -2402,7 +2418,22 @@ int Optimizer::OptimizeSim3(KeyFrame *pKF1, KeyFrame *pKF2, vector<MapPoint *> &
 
     return nIn;
 }
-
+/**
+ * @brief 优化局部惯性BA（束调整）
+ * 
+ * 此函数执行局部惯性束调整，以优化给定关键帧及其相关联地图点的位姿。
+ * 它通过构建一个包含关键帧和地图点的图优化问题，并使用g2o库进行求解。
+ * 
+ * @param pKF 关键帧指针，用于获取其地图和共视邻接关键帧
+ * @param pbStopFlag 停止标志指针，用于控制优化器是否应该停止
+ * @param pMap 地图指针，用于更新地图状态
+ * @param num_fixedKF 输出参数，返回固定的关键帧数量
+ * @param num_OptKF 输出参数，返回优化的关键帧数量
+ * @param num_MPs 输出参数，返回参与优化的地图点数量
+ * @param num_edges 输出参数，返回添加到优化器的边的数量
+ * @param bLarge 标志位指示是否使用大窗口设置进行更复杂的优化
+ * @param bRecInit 标志位指示是否重新初始化最近的关键帧链接（仅在最后一次迭代中）
+ */
 void Optimizer::LocalInertialBA(KeyFrame *pKF, bool *pbStopFlag, Map *pMap, int& num_fixedKF, int& num_OptKF, int& num_MPs, int& num_edges, bool bLarge, bool bRecInit)
 {
     Map* pCurrentMap = pKF->GetMap();
@@ -3071,6 +3102,24 @@ Eigen::MatrixXd Optimizer::Marginalize(const Eigen::MatrixXd &H, const int &star
     return res;
 }
 
+/**
+ * @brief 执行惯性优化，以改善IMU参数估计，包括旋转、尺度、偏置等。
+ * 
+ * 此函数使用g2o优化框架对地图中的关键帧进行惯性优化，通过调整陀螺仪和加速度计的偏置、世界坐标系到IMU坐标系的旋转矩阵以及尺度因子，
+ * 以最小化由IMU测量数据引起的误差。它还考虑了先验信息（如偏置的先验估计），并允许固定或优化速度。
+ * 
+ * @param pMap 地图指针
+ * @param Rwg 世界坐标系到IMU坐标系的旋转矩阵
+ * @param scale 尺度因子
+ * @param bg 陀螺仪偏置
+ * @param ba 加速度计偏置
+ * @param bMono 是否是单目系统（影响尺度因子是否固定）
+ * @param covInertial IMU协方差矩阵（未使用）
+ * @param bFixedVel 是否固定速度不进行优化
+ * @param bGauss 是否使用高斯近似（未使用）
+ * @param priorG 陀螺仪偏置的先验值
+ * @param priorA 加速度计偏置的先验值
+ */
 void Optimizer::InertialOptimization(Map *pMap, Eigen::Matrix3d &Rwg, double &scale, Eigen::Vector3d &bg, Eigen::Vector3d &ba, bool bMono, Eigen::MatrixXd  &covInertial, bool bFixedVel, bool bGauss, float priorG, float priorA)
 {
     Verbose::PrintMess("inertial optimization", Verbose::VERBOSITY_NORMAL);
@@ -3257,7 +3306,17 @@ void Optimizer::InertialOptimization(Map *pMap, Eigen::Matrix3d &Rwg, double &sc
     }
 }
 
-
+/**
+ * @brief 惯性优化函数，用于优化IMU的陀螺仪和加速度计偏置。
+ * 
+ * 该函数通过g2o优化框架对地图中的关键帧进行惯性导航优化，以最小化由IMU测量数据引起的误差。它考虑了偏置的先验信息，并且允许关键帧的速度进行调整。
+ * 
+ * @param pMap 地图指针，包含所有关键帧和IMU预积分信息。
+ * @param bg 陀螺仪偏置向量，将被更新为最优估计值。
+ * @param ba 加速度计偏置向量，将被更新为最优估计值。
+ * @param priorG 陀螺仪偏置的先验值，用于设置边的信息矩阵（权重）。
+ * @param priorA 加速度计偏置的先验值，用于设置边的信息矩阵（权重）。
+ */
 void Optimizer::InertialOptimization(Map *pMap, Eigen::Vector3d &bg, Eigen::Vector3d &ba, float priorG, float priorA)
 {
     int its = 200; // Check number of iterations
@@ -3420,6 +3479,18 @@ void Optimizer::InertialOptimization(Map *pMap, Eigen::Vector3d &bg, Eigen::Vect
     }
 }
 
+/**
+ * @brief 执行惯性优化以估计重力方向和尺度
+ * 
+ * 此函数使用g2o库构建一个图优化问题，以估计地图中的重力方向和尺度。
+ * 它通过将关键帧、速度、陀螺仪偏差和加速度偏差作为固定顶点添加到优化器中，
+ * 并将重力方向和尺度作为可变顶点。然后，它通过创建表示IMU预积分的边来连接这些顶点，
+ * 从而允许对重力方向和尺度进行优化。
+ *
+ * @param pMap 地图指针，用于获取所有关键帧信息
+ * @param Rwg 输出参数，返回优化后的世界坐标系下的重力方向
+ * @param scale 输出参数，返回优化后的尺度因子
+ */
 void Optimizer::InertialOptimization(Map *pMap, Eigen::Matrix3d &Rwg, double &scale)
 {
     int its = 10;

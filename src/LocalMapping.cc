@@ -206,11 +206,11 @@ void LocalMapping::Run() {
 
 /**
  * @brief 插入一个新的关键帧到局部地图中
- * 
+ *
  * 此函数用于将一个关键帧（KeyFrame* pKF）插入到局部地图的待处理关键帧列表中。
  * 同时，它会设置一个标志mbAbortBA为true，这通常用于通知优化线程停止当前的BA（束调整）过程，
  * 因为有新的关键帧需要被处理。
- * 
+ *
  * @param pKF 要插入的关键帧指针
  */
 void LocalMapping::InsertKeyFrame(KeyFrame *pKF) {
@@ -225,6 +225,15 @@ bool LocalMapping::CheckNewKeyFrames() {
     return (!mlNewKeyFrames.empty());
 }
 
+/**
+ * @brief 处理新的关键帧，包括计算BoW结构，关联地图点，更新地图点的法线和描述子，更新共视图链接，并将关键帧插入地图中。
+ *
+ * 该函数首先从待处理的关键帧队列中取出一个新的关键帧。接着计算该关键帧的Bag of Words（BoW）结构。
+ * 然后遍历关键帧中的所有地图点匹配，对于每个匹配到的地图点：
+ *   - 如果地图点状态良好且尚未关联到当前关键帧，则将其添加到该关键帧，并更新其法线和深度信息以及计算其独特的描述子。
+ *   - 如果地图点已经存在于当前关键帧中（这通常发生在由跟踪模块新插入的立体视觉点时），则将其添加到最近添加的地图点列表中。
+ * 最后，更新当前关键帧在共视图中的链接，并将其添加到地图的图谱中。
+ */
 void LocalMapping::ProcessNewKeyFrame() {
     {
         unique_lock< mutex > lock(mMutexNewKFs);
@@ -1009,29 +1018,32 @@ bool LocalMapping::isFinished() {
     return mbFinished;
 }
 
+/**
+ * @brief 初始化IMU参数，包括偏置、旋转、尺度等，并进行全局优化。
+ *
+ * 此函数用于初始化惯性测量单元(IMU)的参数，包括陀螺仪和加速度计的偏置、世界坐标系到IMU坐标系的旋转矩阵、尺度因子等。
+ * 它还会检查地图中是否有足够的关键帧进行初始化，并执行全局优化以改善估计结果。
+ *
+ * @param priorG 陀螺仪先验偏置
+ * @param priorA 加速度计先验偏置
+ * @param bFIBA 是否执行全惯性BA（Full Inertial BA）优化
+ */
 void LocalMapping::InitializeIMU(float priorG, float priorA, bool bFIBA) {
-    // cout << "Initializing IMU in Local Mapping222" << endl;
     if(mbResetRequested) {
-        cout << "Reset requested in LM" << endl;
+        cout << "IIMU: Reset requested in LM" << endl;
         return;
     }
+    // Define minimum time and keyframes required for initialization based on camera type.
+    float minTime = mbMonocular ? 2.0 : 1.0;    // Monocular cameras require more time for initialization.
+    int nMinKF    = 10;
 
-    float minTime;
-    int nMinKF;
-    if(mbMonocular) {
-        minTime = 2.0;
-        nMinKF  = 10;
-    } else {
-        minTime = 1.0;
-        nMinKF  = 10;
-    }
-
+    // Ensure there are enough keyframes in the atlas to proceed with initialization.
     if(mpAtlas->KeyFramesInMap() < nMinKF) {
         cout << "Not enough KFs for initialization in mpAtlas " << mpAtlas->KeyFramesInMap() << endl;
         return;
     }
 
-    // Retrieve all keyframe in temporal order
+    // Gather all keyframes in temporal order.
     list< KeyFrame * > lpKF;
     KeyFrame *pKF = mpCurrentKeyFrame;
     while(pKF->mPrevKF) {
@@ -1058,25 +1070,28 @@ void LocalMapping::InitializeIMU(float priorG, float priorA, bool bFIBA) {
         lpKF.push_back(mpCurrentKeyFrame);
     }
 
+    // Initialize the IMU bias and estimate initial velocities and orientations.
     const int N = vpKF.size();
     IMU::Bias b(0, 0, 0, 0, 0, 0);
-    // Compute and KF velocities mRwg estimation
+    // Estimate initial velocities and orientation from the collected keyframes.
     if(!mpCurrentKeyFrame->GetMap()->isImuInitialized()) {
+        // Calculate orientation and velocity for each keyframe.
         Eigen::Matrix3f Rwg;
         Eigen::Vector3f dirG;
         dirG.setZero();
+        // dirG is the average gravity direction.
         for(vector< KeyFrame * >::iterator itKF = vpKF.begin(); itKF != vpKF.end(); itKF++) {
             if(!(*itKF)->mpImuPreintegrated)
                 continue;
             if(!(*itKF)->mPrevKF)
                 continue;
-
+            // Update direction of gravity and velocities.
             dirG -= (*itKF)->mPrevKF->GetImuRotation() * (*itKF)->mpImuPreintegrated->GetUpdatedDeltaVelocity();
             Eigen::Vector3f _vel = ((*itKF)->GetImuPosition() - (*itKF)->mPrevKF->GetImuPosition()) / (*itKF)->mpImuPreintegrated->dT;
             (*itKF)->SetVelocity(_vel);
             (*itKF)->mPrevKF->SetVelocity(_vel);
         }
-
+        // Calculate rotation matrix from estimated gravity direction.
         dirG = dirG / dirG.norm();
         Eigen::Vector3f gI(0.0f, 0.0f, -1.0f);
         Eigen::Vector3f v   = gI.cross(dirG);
@@ -1088,6 +1103,7 @@ void LocalMapping::InitializeIMU(float priorG, float priorA, bool bFIBA) {
         mRwg                = Rwg.cast< double >();
         mTinit              = mpCurrentKeyFrame->mTimeStamp - mFirstTs;
     } else {
+        // If already initialized, use existing values.
         mRwg = Eigen::Matrix3d::Identity();
         mbg  = mpCurrentKeyFrame->GetGyroBias().cast< double >();
         mba  = mpCurrentKeyFrame->GetAccBias().cast< double >();
@@ -1095,8 +1111,10 @@ void LocalMapping::InitializeIMU(float priorG, float priorA, bool bFIBA) {
 
     mScale = 1.0;
 
+    // Calculate initialization time.
     mInitTime = mpTracker->mLastFrame.mTimeStamp - vpKF.front()->mTimeStamp;
 
+    // Optimize the map using inertial measurements.
     std::chrono::steady_clock::time_point t0 = std::chrono::steady_clock::now();
     Optimizer::InertialOptimization(mpAtlas->GetCurrentMap(), mRwg, mScale, mbg, mba, mbMonocular, infoInertial, false, false, priorG, priorA);
     std::chrono::steady_clock::time_point t1 = std::chrono::steady_clock::now();
@@ -1108,6 +1126,7 @@ void LocalMapping::InitializeIMU(float priorG, float priorA, bool bFIBA) {
     }
 
     // Before this line we are not changing the map
+    // Update the map with the new rotation and scale if necessary.
     {
         unique_lock< mutex > lock(mpAtlas->GetCurrentMap()->mMutexMapUpdate);
         if((fabs(mScale - 1.f) > 0.00001) || !mbMonocular) {
@@ -1117,6 +1136,7 @@ void LocalMapping::InitializeIMU(float priorG, float priorA, bool bFIBA) {
         }
 
         // Check if initialization OK
+        // Mark keyframes as IMU capable.
         if(!mpAtlas->isImuInitialized())
             for(int i = 0; i < N; i++) {
                 KeyFrame *pKF2 = vpKF[i];
@@ -1124,6 +1144,7 @@ void LocalMapping::InitializeIMU(float priorG, float priorA, bool bFIBA) {
             }
     }
 
+    // Update the tracker with the new IMU bias and scale.
     mpTracker->UpdateFrameIMU(1.0, vpKF[0]->GetImuBias(), mpCurrentKeyFrame);
     if(!mpAtlas->isImuInitialized()) {
         mpAtlas->SetImuInitialized();
@@ -1145,8 +1166,8 @@ void LocalMapping::InitializeIMU(float priorG, float priorA, bool bFIBA) {
     // Get Map Mutex
     unique_lock< mutex > lock(mpAtlas->GetCurrentMap()->mMutexMapUpdate);
 
+    // Update keyframes and map points after optimization.
     unsigned long GBAid = mpCurrentKeyFrame->mnId;
-
     // Process keyframes in the queue
     while(CheckNewKeyFrames()) {
         ProcessNewKeyFrame();
@@ -1154,13 +1175,16 @@ void LocalMapping::InitializeIMU(float priorG, float priorA, bool bFIBA) {
         lpKF.push_back(mpCurrentKeyFrame);
     }
 
-    // Correct keyframes starting at map first keyframe
+    // Correct keyframes starting from the origin of the current map.
     list< KeyFrame * > lpKFtoCheck(mpAtlas->GetCurrentMap()->mvpKeyFrameOrigins.begin(), mpAtlas->GetCurrentMap()->mvpKeyFrameOrigins.end());
 
     while(!lpKFtoCheck.empty()) {
         KeyFrame *pKF                   = lpKFtoCheck.front();
         const set< KeyFrame * > sChilds = pKF->GetChilds();
         Sophus::SE3f Twc                = pKF->GetPoseInverse();
+
+        // Correct the pose, velocity, and bias for each keyframe.
+        // Also propagate the corrections to child keyframes.
         for(set< KeyFrame * >::const_iterator sit = sChilds.begin(); sit != sChilds.end(); sit++) {
             KeyFrame *pChild = *sit;
             if(!pChild || pChild->isBad())
@@ -1183,6 +1207,8 @@ void LocalMapping::InitializeIMU(float priorG, float priorA, bool bFIBA) {
             lpKFtoCheck.push_back(pChild);
         }
 
+        // This section contains the logic for updating poses, velocities, and biases of keyframes.
+        // It also marks them as optimized in the global BA step.
         pKF->mTcwBefGBA = pKF->GetPose();
         pKF->SetPose(pKF->mTcwGBA);
 
@@ -1197,10 +1223,10 @@ void LocalMapping::InitializeIMU(float priorG, float priorA, bool bFIBA) {
         lpKFtoCheck.pop_front();
     }
 
-    // Correct MapPoints
+    // Correct map points based on the updated keyframe poses.
     const vector< MapPoint * > vpMPs = mpAtlas->GetCurrentMap()->GetAllMapPoints();
-
     for(size_t i = 0; i < vpMPs.size(); i++) {
+        // Update the world position of map points based on their reference keyframe's correction.
         MapPoint *pMP = vpMPs[i];
 
         if(pMP->isBad())
@@ -1229,6 +1255,7 @@ void LocalMapping::InitializeIMU(float priorG, float priorA, bool bFIBA) {
     mnKFs = vpKF.size();
     mIdxInit++;
 
+    // Cleanup new keyframes and set the system state back to normal.
     for(list< KeyFrame * >::iterator lit = mlNewKeyFrames.begin(), lend = mlNewKeyFrames.end(); lit != lend; lit++) {
         (*lit)->SetBadFlag();
         delete *lit;
@@ -1238,6 +1265,7 @@ void LocalMapping::InitializeIMU(float priorG, float priorA, bool bFIBA) {
     mpTracker->mState = Tracking::OK;
     bInitializing     = false;
 
+    // Increase change index for the current map.
     mpCurrentKeyFrame->GetMap()->IncreaseChangeIndex();
     cout << "Initialization IMU finished" << endl;
     return;

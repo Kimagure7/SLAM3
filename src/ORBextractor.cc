@@ -998,6 +998,17 @@ static void computeDescriptors(const Mat &image, vector< KeyPoint > &keypoints, 
         computeOrbDescriptor(keypoints[i], image, &pattern[0], descriptors.ptr((int)i));
 }
 
+/**
+ * @brief ORB特征提取器的运算符重载函数，用于从输入图像中提取ORB特征点和描述符。
+ *
+ * @param _image 输入图像，应为8位灰度图像。
+ * @param _mask 用于掩码操作的输入数组，未使用。
+ * @param _keypoints 输出向量，用于存储检测到的关键点。
+ * @param _descriptors 输出数组，用于存储关键点的描述符。
+ * @param vLappingArea 包含两个元素的向量，表示在该范围内的关键点将被标记为立体匹配候选。
+ *
+ * @return int 返回值表示单目图像中的关键点数量。如果输入图像为空，则返回-1。
+ */
 int ORBextractor::operator()(InputArray _image, InputArray _mask, vector< KeyPoint > &_keypoints,
                              OutputArray _descriptors, std::vector< int > &vLappingArea) {
     // cout << "[ORBextractor]: Max Features: " << nfeatures << endl;

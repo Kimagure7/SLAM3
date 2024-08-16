@@ -112,7 +112,14 @@ void KeyFrame::SetPose(const Sophus::SE3f &Tcw) {
 		mOwb = mRwc * mImuCalib.mTcb.translation() + mTwc.translation();
 	}
 }
-
+/**
+ * @brief 设置IMU的速度
+ * 
+ * 此函数在互斥锁保护下设置IMU在世界坐标系中的速度。同时，它将mbHasVelocity标志设置为true，
+ * 表示该KeyFrame已经具有有效的速度信息。
+ *
+ * @param Vw IMU在世界坐标系中的速度向量
+ */
 void KeyFrame::SetVelocity(const Eigen::Vector3f &Vw) {
 	unique_lock< mutex > lock(mMutexPose);
 	mVw           = Vw;
@@ -133,12 +140,26 @@ Eigen::Vector3f KeyFrame::GetCameraCenter() {
 	unique_lock< mutex > lock(mMutexPose);
 	return mTwc.translation();
 }
-
+/**
+ * @brief 获取IMU的位置
+ * 
+ * 此函数在互斥锁保护下直接返回IMU在世界坐标系中的位置。该位置信息存储在mOwb变量中，
+ * 表示从世界坐标系原点到IMU坐标系原点的向量。
+ *
+ * @return Eigen::Vector3f IMU在世界坐标系中的位置向量
+ */
 Eigen::Vector3f KeyFrame::GetImuPosition() {
 	unique_lock< mutex > lock(mMutexPose);
 	return mOwb;
 }
-
+/**
+ * @brief 获取IMU旋转矩阵
+ * 
+ * 此函数在互斥锁保护下计算并返回IMU的旋转矩阵。该旋转矩阵由当前关键帧的世界坐标系到相机坐标系的变换（mTwc）
+ * 与相机到IMU的校准变换（mImuCalib.mTcb）组合后得到的姿势变换的旋转部分构成。
+ * 
+ * @return Eigen::Matrix3f IMU的旋转矩阵
+ */
 Eigen::Matrix3f KeyFrame::GetImuRotation() {
 	unique_lock< mutex > lock(mMutexPose);
 	return (mTwc * mImuCalib.mTcb).rotationMatrix();

@@ -312,6 +312,15 @@ Eigen::Matrix3f Preintegrated::GetUpdatedDeltaRotation()
     return NormalizeRotation(dR * Sophus::SO3f::exp(JRg*db.head(3)).matrix());
 }
 
+/**
+ * @brief 获取更新后的速度增量
+ * 
+ * 此函数在保护的互斥锁区域内计算并返回更新后的速度增量。
+ * 该增量是基于当前的速度差（dV）、与陀螺仪偏差（db.head(3)）相关的雅可比矩阵（JVg），
+ * 以及与加速度计偏差（db.tail(3)）相关的雅可比矩阵（JVa）的线性组合。
+ * 
+ * @return Eigen::Vector3f 更新后的速度增量
+ */
 Eigen::Vector3f Preintegrated::GetUpdatedDeltaVelocity()
 {
     std::unique_lock<std::mutex> lock(mMutex);

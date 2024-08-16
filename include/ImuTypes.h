@@ -139,7 +139,8 @@ public:
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 };
 
-//Preintegration of Imu Measurements
+// Preintegrated类用于处理IMU数据的预积分，以估计姿态、速度和位置的变化。
+// 该类实现了序列化功能，以便于存储和加载预积分结果。
 class Preintegrated
 {
     friend class boost::serialization::access;
