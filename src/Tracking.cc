@@ -990,7 +990,7 @@ Sophus::SE3f Tracking::GrabImageMonocular(const cv::Mat &im, const double &times
             mCurrentFrame = Frame(mImGray, timestamp, mpORBextractorLeft, mpORBVocabulary, mpCamera, mDistCoef, mbf, mThDepth);
     } else if(mSensor == System::IMU_MONOCULAR) {
         // ZoeyChiu 24.8.16: Add INIT_RELOCALIZE state
-        if(mState == NOT_INITIALIZED || mState == NO_IMAGES_YET || mState == INIT_RELOCALIZE ) {
+        if(mState == NOT_INITIALIZED || mState == NO_IMAGES_YET || mState == INIT_RELOCALIZE) {
             mCurrentFrame = Frame(mImGray, timestamp, mpIniORBextractor, mpORBVocabulary, mpCamera, mDistCoef, mbf, mThDepth, &mLastFrame, *mpImuCalib, maruco_dict);
         } else {
             mCurrentFrame = Frame(mImGray, timestamp, mpORBextractorLeft, mpORBVocabulary, mpCamera, mDistCoef, mbf, mThDepth, &mLastFrame, *mpImuCalib, maruco_dict);
@@ -1266,11 +1266,11 @@ void Tracking::Track() {
             mLastFrame = mCurrentFrame;
         } else {
             // trigger initialization.
-            cout << "line 1481 keyframes " << pCurrentMap->KeyFramesInMap() << " MapPoints " << pCurrentMap->MapPointsInMap() << endl;
+            cout << "line 1269 keyframes " << pCurrentMap->KeyFramesInMap() << " MapPoints " << pCurrentMap->MapPointsInMap() << endl;
             if(pCurrentMap->KeyFramesInMap() == 0) {
                 mState = NOT_INITIALIZED;
             } else {
-                cout << "line 1877" << endl;
+                cout << "line 1273 ";
                 cout << "mlFrameTimes.size()= " << mlFrameTimes.size() << endl;
                 cout << "KeyFrame::nNextId=" << KeyFrame::nNextId << endl;
                 // Relocalization();
@@ -1430,7 +1430,7 @@ void Tracking::Track() {
                         pKFend->mNextKF  = pKFcur;
 
                         // update timestamps
-                        // goproslam 中时间戳都是0开始 需要把地图中旧的帧时间戳改掉 
+                        // goproslam 中时间戳都是0开始 需要把地图中旧的帧时间戳改掉
                         // 在修改rsd435i_rgbd后 实时的开始时间戳也是0了
                         cout << "vpKFs.back()->mpImuPreintegrated: " << vpKFs.back()->mpImuPreintegrated << endl;
                         double dt = 1.0 / 29.97;
@@ -1458,7 +1458,7 @@ void Tracking::Track() {
                         mnLastKeyFrameId = pKFcur->mnId;
                         mpLastKeyFrame   = pKFcur;
 
-                        cout << "pKFcur->mnId" << pKFcur->mnId << endl;
+                        cout << "pKFcur->mnId " << pKFcur->mnId << endl;
                         mpAtlas->AddKeyFrame(pKFcur);
                         pKFcur->UpdateConnections();
                         mpLocalMapper->InsertKeyFrame(pKFcur);
@@ -1549,7 +1549,7 @@ void Tracking::Track() {
                     // in that case we don't want to reset current map
                     // instead we should try to relocalize
                     mState = INIT_RELOCALIZE;
-                    cout << "Failed to track local map. Trying to relocalize..." << endl;
+                    cout << "1552 Failed to track local map. Trying to relocalize..." << endl;
                 } else {
                     cout << "Fail to track local map!" << endl;
                 }
@@ -1564,7 +1564,7 @@ void Tracking::Track() {
 
         if(bOK)
             mState = OK;
-        else if(mState == OK) { //意味着TrackLocalMap失败 但是前面的追踪位姿成功了
+        else if(mState == OK) {    // 意味着TrackLocalMap失败 但是前面的追踪位姿成功了
             if(mSensor == System::IMU_MONOCULAR || mSensor == System::IMU_STEREO || mSensor == System::IMU_RGBD) {
                 Verbose::PrintMess("Track lost for less than one second...", Verbose::VERBOSITY_NORMAL);
                 if(!pCurrentMap->isImuInitialized() || !pCurrentMap->GetIniertialBA2()) {
@@ -1599,7 +1599,7 @@ void Tracking::Track() {
         if(pCurrentMap->isImuInitialized()) {
             if(bOK) {
                 if(mCurrentFrame.mnId == (mnLastRelocFrameId + mnFramesToResetIMU)) {
-                    cout << "RESETING FRAME!!!" << endl;
+                    cout << "RESETING FRAME!!!(actually nothing to do)" << endl;
                     ResetFrameIMU();
                 } else if(mCurrentFrame.mnId > (mnLastRelocFrameId + 30))
                     mLastBias = mCurrentFrame.mImuBias;
@@ -2450,8 +2450,9 @@ bool Tracking::TrackLocalMap() {
     // Decide if the tracking was succesful
     // More restrictive if there was a relocalization recently
     mpLocalMapper->mnMatchesInliers = mnMatchesInliers;
-    if(mCurrentFrame.mnId < mnLastRelocFrameId + mMaxFrames && mnMatchesInliers < 30) {
-        cout << "TrackLocalMap() mCurrentFrame.mnId<mnLastRelocFrameId+mMaxFrames (" << mCurrentFrame.mnId << " < " << mnLastRelocFrameId << " + " << mMaxFrames << " ) && mnMatchesInliers<50" << " = " << mnMatchesInliers << endl;
+    // 30 -> 27
+    if(mCurrentFrame.mnId < mnLastRelocFrameId + mMaxFrames && mnMatchesInliers < 27) {
+        cout << "TrackLocalMap() mCurrentFrame.mnId<mnLastRelocFrameId+mMaxFrames (" << mCurrentFrame.mnId << " < " << mnLastRelocFrameId << " + " << mMaxFrames << " ) && mnMatchesInliers<30" << " = " << mnMatchesInliers << endl;
         return false;
     }
 
@@ -2748,7 +2749,7 @@ void Tracking::CreateNewKeyFrame() {
 
 /**
  * @brief SearchLocalPoints 在当前帧中搜索局部地图点，以进行特征匹配和跟踪。
- * 
+ *
  * 该函数首先清理当前帧中已经匹配的MapPoint，标记那些不好的MapPoint为NULL，
  * 并更新其他MapPoint的状态。然后，它检查局部地图中的每个MapPoint是否可见于当前帧，
  * 并统计需要匹配的点数。最后，使用ORBmatcher进行基于投影的特征匹配。
@@ -2857,7 +2858,7 @@ void Tracking::UpdateLocalPoints() {
 
 /**
  * @brief 更新局部关键帧列表
- * 
+ *
  * 此函数用于更新追踪线程中的局部关键帧列表。它通过统计每个地图点在哪些关键帧中被观测到，
  * 并将这些关键帧添加到局部地图中。同时，它还根据地图点的观测次数来确定哪个关键帧共享了最多的地图点，
  * 并将其设为参考关键帧。
@@ -3020,7 +3021,8 @@ bool Tracking::Relocalization() {
 
     // We perform first an ORB matching with each candidate
     // If enough matches are found we setup a PnP solver
-    ORBmatcher matcher(0.75, true);
+    // 0.75 -> 0.7
+    ORBmatcher matcher(0.7, true);
 
     vector< MLPnPsolver * > vpMLPnPsolvers;
     vpMLPnPsolvers.resize(nKFs);
