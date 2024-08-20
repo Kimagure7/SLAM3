@@ -130,7 +130,15 @@ KeyFrame *MapPoint::GetReferenceKeyFrame() {
     unique_lock< mutex > lock(mMutexFeatures);
     return mpRefKF;
 }
-
+/**
+ * 向MapPoint添加一个KeyFrame观测
+ *
+ * @param pKF 指定的KeyFrame指针，表示该MapPoint在哪个关键帧中被观测到。
+ * @param idx 在关键帧中的特征点索引。
+ *
+ * 该函数用于更新MapPoint的观测信息。如果该MapPoint已经被指定的关键帧观测过，则更新其在关键帧中的位置索引；
+ * 如果是新的观测，则将其添加到mObservations中，并根据情况增加nObs（总的观测次数）。
+ */
 void MapPoint::AddObservation(KeyFrame *pKF, int idx) {
     unique_lock< mutex > lock(mMutexFeatures);
     tuple< int, int > indexes;
@@ -299,7 +307,13 @@ float MapPoint::GetFoundRatio() {
     unique_lock< mutex > lock(mMutexFeatures);
     return static_cast< float >(mnFound) / mnVisible;
 }
-
+/**
+ * 计算MapPoint的显著性描述子
+ *
+ * 该函数的主要目标是为当前MapPoint选择一个最能代表其特征的描述子。通过收集所有观测到此点的关键帧中的描述子，
+ * 计算它们之间的距离，然后选取与其它描述子具有最小中位数距离的那个描述子作为该点的最终描述子。
+ * 这个过程有助于提高地图点在不同关键帧间的一致性和识别性，对于后续的地图优化和定位任务有重要影响。
+ */
 void MapPoint::ComputeDistinctiveDescriptors() {
     // Retrieve all observed descriptors
     vector< cv::Mat > vDescriptors;
@@ -382,12 +396,24 @@ tuple< int, int > MapPoint::GetIndexInKeyFrame(KeyFrame *pKF) {
     else
         return tuple< int, int >(-1, -1);
 }
-
+/**
+ * 检查MapPoint是否在指定的KeyFrame中
+ *
+ * @param pKF 指定的KeyFrame指针
+ * @return 如果MapPoint在KeyFrame的观测列表中，则返回true；否则返回false。
+ */
 bool MapPoint::IsInKeyFrame(KeyFrame *pKF) {
     unique_lock< mutex > lock(mMutexFeatures);
     return (mObservations.count(pKF));
 }
 
+/**
+ * 更新MapPoint的法线向量和深度信息
+ *
+ * 该函数遍历所有观测到此MapPoint的关键帧，计算并更新其平均法线向量和深度范围（最大与最小距离）。
+ * 使用参考关键帧（mpRefKF）来确定深度信息，并根据观测到的点在关键帧中的位置，计算出从相机中心到该点的向量。
+ * 这些信息对于后续的地图优化、重定位等任务至关重要。
+ */
 void MapPoint::UpdateNormalAndDepth() {
     map< KeyFrame *, tuple< int, int > > observations;
     KeyFrame *pRefKF;

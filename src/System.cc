@@ -143,6 +143,7 @@ System::System(const string &strVocFile, const string &strSettingsFile, const eS
 		mpAtlas->ChangeMap(map_vector.at(0));
 		Map *pCurrentMap = mpAtlas->GetCurrentMap();
 		cout << "Atlas loaded!" << endl;
+		cout << "pCurrentMap->isImuInitialized():"<<pCurrentMap->isImuInitialized()<<endl;
 	}
 
 	if(mSensor == IMU_STEREO || mSensor == IMU_MONOCULAR || mSensor == IMU_RGBD)
