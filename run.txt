@@ -1,0 +1,91 @@
+/umi/origin/SLAM3/Examples/Monocular-Inertial/rsd435i_equi \
+--vocabulary /umi/origin/SLAM3/Vocabulary/ORBvoc.txt \
+--setting /umi/origin/SLAM3/Examples/yaml/radtand435i.yaml \
+--input_video /umi/origin/SLAM3/Examples/data/2024-07-26-02-14-20/video.mp4 \
+--input_imu_json /umi/origin/SLAM3/Examples/data/2024-07-26-02-14-20/imu_data.json \
+--output_trajectory_csv /umi/origin/SLAM3/Examples/data/2024-07-26-02-14-20/ \
+--save_map /umi/origin/SLAM3/Examples/data/2024-07-26-02-14-20/ \
+-g
+
+
+/ORB_SLAM3/Examples/Monocular-Inertial/gopro_slam --vocabulary /ORB_SLAM3/Vocabulary/ORBvoc.txt --setting /ORB_SLAM3/Examples/Monocular-Inertial/gopro10_maxlens_fisheye_setting_v1_720.yaml --input_video /umi/example_demo_session/demos/mapping/raw_video.mp4 --input_imu_json /umi/example_demo_session/demos/mapping/imu_data.json --output_trajectory_csv /umi/example_demo_session/demos/mapping/mapping_camera_trajectory.csv --save_map /umi/example_demo_session/demos/mapping/map_atlas.osa -g
+
+/umi/origin/SLAM3/Examples/Monocular-Inertial/gopro_slam --vocabulary /ORB_SLAM3/Vocabulary/ORBvoc.txt --setting /ORB_SLAM3/Examples/Monocular-Inertial/gopro10_maxlens_fisheye_setting_v1_720.yaml --input_video /umi/example_demo_session/demos/mapping/raw_video.mp4 --input_imu_json /umi/example_demo_session/demos/mapping/imu_data.json --output_trajectory_csv /umi/example_demo_session/demos/mapping/mapping_camera_trajectory.csv  --output_trajectory_tum /umi/example_demo_session/demos/mapping/camera_trajectory.csv -g --target_ip 192.168.110.13 --target_port 10066
+
+/umi/origin/SLAM3/Examples/Monocular-Inertial/gopro_slam \
+	--vocabulary /ORB_SLAM3/Vocabulary/ORBvoc.txt \
+	--setting /ORB_SLAM3/Examples/Monocular-Inertial/gopro10_maxlens_fisheye_setting_v1_720.yaml \
+	--input_video /umi/example_demo_session/demos/demo_C3441328164125_2024.01.10_10.57.34.882133/raw_video.mp4 \
+	--input_imu_json /umi/example_demo_session/demos/demo_C3441328164125_2024.01.10_10.57.34.882133/imu_data.json \
+	--output_trajectory_csv /umi/example_demo_session/demos/demo_C3441328164125_2024.01.10_10.57.34.882133/camera_trajectory.csv \
+	--load_map /umi/example_demo_session/demos/mapping/map_atlas.osa \
+	--mask_img /umi/example_demo_session/demos/demo_C3441328164125_2024.01.10_10.57.34.882133/slam_mask.png \
+	--max_lost_frames 60 \
+    --target_port 10066 \
+    --target_ip 192.168.110.13 \
+    -g
+
+    /ORB_SLAM3/Examples/Monocular-Inertial/gopro_slam \
+	--vocabulary /ORB_SLAM3/Vocabulary/ORBvoc.txt \
+	--setting /ORB_SLAM3/Examples/Monocular-Inertial/gopro10_maxlens_fisheye_setting_v1_720.yaml \
+	--input_video /umi/example_demo_session/demos/demo_C3441328164125_2024.01.10_10.57.34.882133/raw_video.mp4 \
+	--input_imu_json /umi/example_demo_session/demos/demo_C3441328164125_2024.01.10_10.57.34.882133/imu_data.json \
+	--output_trajectory_csv /umi/example_demo_session/demos/demo_C3441328164125_2024.01.10_10.57.34.882133/camera_trajectory.csv \
+	--load_map /umi/example_demo_session/demos/mapping/map_atlas.osa \
+	--mask_img /umi/example_demo_session/demos/demo_C3441328164125_2024.01.10_10.57.34.882133/slam_mask.png \
+	--max_lost_frames 60 \
+    -g
+
+
+/umi/origin/SLAM3/Examples/Monocular-Inertial/rsd435i_rt \
+--vocabulary /umi/origin/SLAM3/Vocabulary/ORBvoc.txt \
+--setting /umi/origin/SLAM3/Examples/yaml/radtand435i.yaml \
+--output_trajectory_csv /umi/origin/SLAM3/Examples/data/mapping.csv \
+--save_map /umi/origin/SLAM3/Examples/data/map_atlas.osa 
+
+
+/umi/origin/SLAM3/Examples/Monocular-Inertial/rsd435i_rt \
+--vocabulary /umi/origin/SLAM3/Vocabulary/ORBvoc.txt \
+--setting /umi/origin/SLAM3/Examples/yaml/radtand435i.yaml \
+--output_trajectory_csv /umi/origin/SLAM3/Examples/data/tracking_tra_zfx.csv \
+--load_map /umi/origin/SLAM3/Examples/data/map_atlas.osa 
+
+/umi/origin/SLAM3/Examples/Monocular-Inertial/rsd435i_rt \
+--vocabulary /umi/origin/SLAM3/Vocabulary/ORBvoc.txt \
+--setting /umi/origin/SLAM3/Examples/yaml/radtand435i.yaml \
+--output_trajectory_csv /umi/origin/SLAM3/Examples/data/mapping.csv \
+--save_map /umi/origin/SLAM3/Examples/data/map_atlas.osa \
+--target_port 7777 \
+--target_ip 192.168.110.238 
+
+/umi/origin/SLAM3/Examples/RGB-D-Inertial/rsd435i_rgbd \
+--vocabulary /umi/origin/SLAM3/Vocabulary/ORBvoc.txt \
+--setting /umi/origin/SLAM3/Examples/yaml/radtand435i.yaml \
+--output_trajectory_csv /umi/origin/SLAM3/Examples/data/run.csv \
+--save_map /umi/origin/SLAM3/Examples/data/map_atlas.osa \
+--tPort 7777 \
+--tIP 192.168.110.238 \
+--cPort 7776 \
+--cIP 192.168.110.238
+
+/umi/origin/SLAM3/Examples/RGB-D-Inertial/rsd435i_rgbd \
+--vocabulary /umi/origin/SLAM3/Vocabulary/ORBvoc.txt \
+--setting /umi/origin/SLAM3/Examples/yaml/radtand435i.yaml \
+--output_trajectory_csv /umi/origin/SLAM3/Examples/data/run.csv \
+--load_map /umi/origin/SLAM3/Examples/data/map_atlas.osa \
+--tPort 7777 \
+--tIP 192.168.110.238 \
+--cPort 7776 \
+--cIP 192.168.110.238
+
+
+/umi/origin/SLAM3/Examples/RGB-D-Inertial/rsd435i_rgbd \
+--vocabulary /umi/origin/SLAM3/Vocabulary/ORBvoc.txt \
+--setting /umi/origin/SLAM3/Examples/yaml/radtand435i.yaml \
+--output_trajectory_csv /umi/origin/SLAM3/Examples/data/mapping.csv \
+--save_map /umi/origin/SLAM3/Examples/data/map_atlas.osa \
+--tPort 10066 \
+--tIP 192.168.110.13 \
+--cPort 10066 \
+--cIP 192.168.110.13
+ 
