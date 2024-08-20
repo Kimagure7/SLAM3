@@ -989,8 +989,7 @@ Sophus::SE3f Tracking::GrabImageMonocular(const cv::Mat &im, const double &times
         else
             mCurrentFrame = Frame(mImGray, timestamp, mpORBextractorLeft, mpORBVocabulary, mpCamera, mDistCoef, mbf, mThDepth);
     } else if(mSensor == System::IMU_MONOCULAR) {
-        // ZoeyChiu 24.8.16: Add INIT_RELOCALIZE state
-        if(mState == NOT_INITIALIZED || mState == NO_IMAGES_YET || mState == INIT_RELOCALIZE) {
+        if(mState == NOT_INITIALIZED || mState == NO_IMAGES_YET) {
             mCurrentFrame = Frame(mImGray, timestamp, mpIniORBextractor, mpORBVocabulary, mpCamera, mDistCoef, mbf, mThDepth, &mLastFrame, *mpImuCalib, maruco_dict);
         } else {
             mCurrentFrame = Frame(mImGray, timestamp, mpORBextractorLeft, mpORBVocabulary, mpCamera, mDistCoef, mbf, mThDepth, &mLastFrame, *mpImuCalib, maruco_dict);
@@ -1271,7 +1270,6 @@ void Tracking::Track() {
                 mState = NOT_INITIALIZED;
             } else {
                 cout << "line 1273 ";
-                cout << "mlFrameTimes.size()= " << mlFrameTimes.size() << endl;
                 cout << "KeyFrame::nNextId=" << KeyFrame::nNextId << endl;
                 // Relocalization();
                 mState = INIT_RELOCALIZE;
@@ -1454,6 +1452,8 @@ void Tracking::Track() {
 
                         cout << "1454 pKFcur->GetVelocity(): " << pKFcur->GetVelocity() << endl;
 
+                        cout << "mCurrentFrame.mnId:" << mCurrentFrame.mnId << endl;
+
                         // update last keyframe
                         mnLastKeyFrameId = pKFcur->mnId;
                         mpLastKeyFrame   = pKFcur;
@@ -1599,7 +1599,7 @@ void Tracking::Track() {
         if(pCurrentMap->isImuInitialized()) {
             if(bOK) {
                 if(mCurrentFrame.mnId == (mnLastRelocFrameId + mnFramesToResetIMU)) {
-                    cout << "RESETING FRAME!!!(actually nothing to do)" << endl;
+                    cout << "RESETING FRAME!!!(actually nothing to do)" << mState << "mnID" << mCurrentFrame.mnId << endl;
                     ResetFrameIMU();
                 } else if(mCurrentFrame.mnId > (mnLastRelocFrameId + 30))
                     mLastBias = mCurrentFrame.mImuBias;
@@ -2303,10 +2303,9 @@ bool Tracking::TrackWithMotionModel() {
         PredictStateIMU();
         return true;
     } else {
-        // cout << "TrackWithMotionModel: (mCurrentFrame.mnId > mnLastRelocFrameId + mnFramesToResetIMU " << mCurrentFrame.mnId << " > " << mnLastRelocFrameId <<"+"<< mnFramesToResetIMU << endl;
+        cout << "TrackWithMotionModel: (mCurrentFrame.mnId > mnLastRelocFrameId + mnFramesToResetIMU " << mCurrentFrame.mnId << " > " << mnLastRelocFrameId <<"+"<< mnFramesToResetIMU << endl;
         mCurrentFrame.SetPose(mVelocity * mLastFrame.GetPose());
     }
-
 
 
 
@@ -2450,8 +2449,7 @@ bool Tracking::TrackLocalMap() {
     // Decide if the tracking was succesful
     // More restrictive if there was a relocalization recently
     mpLocalMapper->mnMatchesInliers = mnMatchesInliers;
-    // 30 -> 27
-    if(mCurrentFrame.mnId < mnLastRelocFrameId + mMaxFrames && mnMatchesInliers < 27) {
+    if(mCurrentFrame.mnId < mnLastRelocFrameId + mMaxFrames && mnMatchesInliers < 30) {
         cout << "TrackLocalMap() mCurrentFrame.mnId<mnLastRelocFrameId+mMaxFrames (" << mCurrentFrame.mnId << " < " << mnLastRelocFrameId << " + " << mMaxFrames << " ) && mnMatchesInliers<30" << " = " << mnMatchesInliers << endl;
         return false;
     }
@@ -2811,7 +2809,7 @@ void Tracking::SearchLocalPoints() {
 
         if(mState == LOST || mState == RECENTLY_LOST)    // Lost for less than 1 second
             th = 15;                                     // 15
-
+        //cout << "mCurrentFramID: " << mCurrentFrame.mnId << " th: " << th << "mState:" << mState << endl;
         int matches = matcher.SearchByProjection(mCurrentFrame, mvpLocalMapPoints, th, mpLocalMapper->mbFarPoints, mpLocalMapper->mThFarPoints);
     }
 }
