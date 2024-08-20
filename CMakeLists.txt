@@ -30,7 +30,7 @@ endif()
 
 LIST(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake_modules)
 
-find_package(OpenCV 4.4)
+find_package(OpenCV 4.4 REQUIRED HINTS /usr/include/opencv4)
    if(NOT OpenCV_FOUND)
       message(FATAL_ERROR "OpenCV > 4.4 not found.")
    endif()
@@ -174,13 +174,13 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/Examples/Monocular-Iner
 #     target_link_libraries(mono_inertial_realsense_D435i ${PROJECT_NAME})
 # endif()
 
-add_executable(rsd435i_offline
-Examples/Monocular-Inertial/rsd435i_offline.cc)
-target_link_libraries(rsd435i_offline ${PROJECT_NAME})
+# add_executable(rsd435i_offline
+# Examples/Monocular-Inertial/rsd435i_offline.cc)
+# target_link_libraries(rsd435i_offline ${PROJECT_NAME})
 
-# add_executable(gopro_slam
-# Examples/Monocular-Inertial/gopro_slam.cc)
-# target_link_libraries(gopro_slam ${PROJECT_NAME})
+add_executable(gopro_slam
+Examples/Monocular-Inertial/gopro_slam.cc)
+target_link_libraries(gopro_slam ${PROJECT_NAME})
 
 add_executable(rsd435i_rt
 Examples/Monocular-Inertial/rsd435i_rt.cc)
@@ -199,3 +199,10 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/Examples/RGB-D-Inertial
 add_executable(rsd435i_rgbd
 Examples/RGB-D-Inertial/rsd435i_rgbd.cc)
 target_link_libraries(rsd435i_rgbd ${PROJECT_NAME})
+
+# #test
+# set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/Examples/test)
+
+# add_executable(enctest
+# Examples/test/enctest.cc)
+# target_link_libraries(enctest ${PROJECT_NAME})
